@@ -47,6 +47,14 @@ export const handler: Handler = async () => {
     const values = Array.from({ length: 9 }).map((_, i) => {
       const num = (i + 1).toString().padStart(3, '0');
       const checkin = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
+      // バリエーション: 0=pending, 1=email_sent, 2=responded, 3=questioning, 4=completed を循環
+      const variant = i % 5;
+      const flags = {
+        initial_email_sent: variant >= 1,
+        form_responded: variant >= 2,
+        questioning: variant === 3,
+        reception_completed: variant === 4,
+      };
       return makeRow(header, {
         booking_id: `TEST-${num}`,
         guest_name: `John Doe ${num}`,
@@ -55,11 +63,11 @@ export const handler: Handler = async () => {
         nights: (i % 3) + 1,
         ota_name: ['Booking.com', 'Expedia', 'Agoda'][i % 3],
         dinner_included: ['Unknown', 'Yes', 'No'][i % 3],
-        initial_email_sent: false,
-        email_sent_at: '',
-        form_responded: false,
-        questioning: false,
-        reception_completed: false,
+        initial_email_sent: flags.initial_email_sent,
+        email_sent_at: flags.initial_email_sent ? new Date().toISOString() : '',
+        form_responded: flags.form_responded,
+        questioning: flags.questioning,
+        reception_completed: flags.reception_completed,
         notes: 'seeded by /functions/seed'
       });
     });

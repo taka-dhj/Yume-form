@@ -79,10 +79,12 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <SummaryCard label="未送信" count={counts.c.pending} sublabel="要メール送信" />
-        <SummaryCard label="回答待ち" count={counts.c.responded} sublabel="催促対象: 0件" />
-        <SummaryCard label="質問中" count={counts.c.questioning} sublabel="個別対応中" />
-        <SummaryCard label="本日チェックイン" count={reservations.filter(r => isSameDateIso(r.checkinDate, today)).length} sublabel={`未完了: ${counts.todayNotCompleted}件`} />
+        <SummaryCard label="未送信" count={counts.c.pending} sublabel="要メール送信" color="red" />
+        <SummaryCard label="回答待ち" count={counts.c.email_sent} sublabel="催促対象: 0件" color="blue" />
+        <SummaryCard label="質問中" count={counts.c.questioning} sublabel="個別対応中" color="orange" />
+        <SummaryCard label="受付完了" count={counts.c.completed} sublabel="本日チェックイン:"
+          color="green"
+        />
       </div>
 
       {/* Filters */}
@@ -114,7 +116,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
 
       {/* Table */}
       <div className="overflow-x-auto border rounded">
-        <table className="min-w-full text-sm">
+        <table className="min-w-full text-sm text-gray-800">
           <thead className="bg-gray-50 sticky top-0">
             <tr>
               <Th>Booking ID</Th>
@@ -135,14 +137,14 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
               </tr>
             )}
             {filtered.map((r: ReservationRow) => (
-              <tr key={r.bookingId} className={`border-t ${rowBg[r.status]}`}>
-                <Td className="font-mono">{r.bookingId}</Td>
-                <Td>{r.guestName}</Td>
-                <Td>{r.email}</Td>
-                <Td>{r.checkinDate}</Td>
-                <Td>{r.nights}</Td>
-                <Td>{r.otaName}</Td>
-                <Td>{r.dinnerIncluded}</Td>
+              <tr key={r.bookingId} className={`border-t ${rowBg[r.status]} text-gray-800`}>
+                <Td className="font-mono text-gray-800">{r.bookingId}</Td>
+                <Td className="text-gray-800">{r.guestName}</Td>
+                <Td className="text-gray-800">{r.email}</Td>
+                <Td className="text-gray-800">{r.checkinDate}</Td>
+                <Td className="text-gray-800">{r.nights}</Td>
+                <Td className="text-gray-800">{r.otaName}</Td>
+                <Td className="text-gray-800">{r.dinnerIncluded}</Td>
                 <Td><StatusBadge status={r.status} /></Td>
                 <Td>
                   <button className="px-3 py-1 text-xs bg-blue-600 text-white rounded">メール</button>
@@ -156,10 +158,18 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   );
 }
 
-function SummaryCard({ label, count, sublabel }: { label: string; count: number; sublabel?: string }) {
+function SummaryCard({ label, count, sublabel, color = 'gray' }: { label: string; count: number; sublabel?: string; color?: 'red' | 'green' | 'orange' | 'blue' | 'gray' }) {
+  const palette: Record<string, { bg: string; border: string; text: string }> = {
+    red: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' },
+    blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+    orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
+    green: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' },
+    gray: { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' },
+  };
+  const c = palette[color] ?? palette.gray;
   return (
-    <div className="rounded border bg-white p-4">
-      <div className="text-gray-500 text-sm">{label}</div>
+    <div className={`rounded border ${c.bg} ${c.border} p-4`}>
+      <div className={`text-sm ${c.text}`}>{label}</div>
       <div className="text-3xl font-semibold mt-1">{count}</div>
       {sublabel ? <div className="text-xs text-gray-500 mt-1">{sublabel}</div> : null}
     </div>
