@@ -134,7 +134,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 <td colSpan={9} className="px-3 py-6 text-center text-gray-500">該当データがありません</td>
               </tr>
             )}
-            {filtered.map((r) => (
+            {filtered.map((r: ReservationRow) => (
               <tr key={r.bookingId} className={`border-t ${rowBg[r.status]}`}>
                 <Td className="font-mono">{r.bookingId}</Td>
                 <Td>{r.guestName}</Td>
