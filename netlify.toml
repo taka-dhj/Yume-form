@@ -1,0 +1,14 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[scheduled.functions]]
+  name = "check-reminders"
+  schedule = "0 0 * * *" # 09:00 JST (00:00 UTC)
