@@ -63,11 +63,11 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   }, [reservations, statusFilter, search, checkinFilter]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header / Alerts */}
       <div className="rounded-lg border bg-rose-50 border-rose-200 p-4">
         <div className="font-semibold text-rose-800 mb-1">緊急対応必要</div>
-        <div className="text-sm text-rose-700 space-x-4">
+        <div className="text-sm text-rose-700 flex flex-wrap gap-x-6 gap-y-1">
           <span>未送信: {counts.urgentUnsent}件</span>
           <span>催促期限: {counts.reminderDue}件</span>
           <span>本日チェックイン未完了: {counts.todayNotCompleted}件</span>
@@ -91,9 +91,9 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1 rounded border text-sm ${statusFilter===s? 'bg-blue-600 text-white border-blue-600':'bg-white border-gray-300 text-gray-700'}`}
+            className={`px-3 py-1.5 rounded border text-sm ${statusFilter===s? 'bg-blue-600 text-white border-blue-600':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
           >
-            {s === 'all' ? 'すべて表示' : s}
+            {s === 'all' ? 'すべて' : s}
           </button>
         ))}
       </div>
@@ -107,7 +107,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
           className="flex-1 border rounded px-3 py-2"
         />
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">チェックイン日</span>
+          <span className="text-sm text-gray-600">チェックイン</span>
           <input type="date" value={checkinFilter} onChange={(e)=>setCheckinFilter(e.target.value)} className="border rounded px-2 py-2" />
         </div>
       </div>
