@@ -7,14 +7,15 @@ export async function getSheetsClient() {
   }
 
   const creds = JSON.parse(serviceAccountJson);
-  const jwt = new google.auth.JWT(
-    creds.client_email,
-    undefined,
-    creds.private_key,
-    ['https://www.googleapis.com/auth/spreadsheets']
-  );
-  await jwt.authorize();
-  return google.sheets({ version: 'v4', auth: jwt });
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: creds.client_email,
+      private_key: creds.private_key,
+    },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+
+  return google.sheets({ version: 'v4', auth });
 }
 
 export async function readReservationsSheet() {
