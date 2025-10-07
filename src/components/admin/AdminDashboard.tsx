@@ -87,10 +87,10 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        {(['all','pending','responded','questioning','email_sent','completed'] as const).map(s => (
+        {((['all','pending','responded','questioning','email_sent','completed'] as const) as Array<ReservationRow['status'] | 'all'>).map((s) => (
           <button
             key={s}
-            onClick={() => setStatusFilter(s as any)}
+            onClick={() => setStatusFilter(s)}
             className={`px-3 py-1 rounded border text-sm ${statusFilter===s? 'bg-blue-600 text-white border-blue-600':'bg-white border-gray-300 text-gray-700'}`}
           >
             {s === 'all' ? 'すべて表示' : s}
