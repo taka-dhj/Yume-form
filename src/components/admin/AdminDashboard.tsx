@@ -39,6 +39,8 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [checkinFilter, setCheckinFilter] = useState(''); // yyyy-mm-dd
   const [updating, setUpdating] = useState<string | null>(null);
   const [viewingResponse, setViewingResponse] = useState<ReservationRow | null>(null);
+  const [emailPreview, setEmailPreview] = useState<{ reservation: ReservationRow; language: 'ja' | 'en' } | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const today = useMemo(() => new Date(), []);
 
@@ -60,6 +62,30 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
       alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const handleSendEmail = async (to: string, subject: string, bodyText: string, bookingId: string) => {
+    setSendingEmail(true);
+    try {
+      const res = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, bodyText }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to send email: ${err.error || 'Unknown error'}`);
+      } else {
+        // Update status to email_sent
+        await handleStatusChange(bookingId, 'email_sent');
+        setEmailPreview(null);
+        alert('メールを送信しました');
+      }
+    } catch (err) {
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -179,7 +205,12 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 <Td><StatusBadge status={r.status} /></Td>
                 <Td onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
-                    <button className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">メール</button>
+                    <button 
+                      onClick={() => setEmailPreview({ reservation: r, language: 'ja' })}
+                      className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      メール
+                    </button>
                     <select
                       value={r.status}
                       onChange={(e) => handleStatusChange(r.bookingId, e.target.value as ReservationRow['status'])}
@@ -201,6 +232,112 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
         </table>
       </div>
     </div>
+
+    {/* Email Preview Modal */}
+    {emailPreview && (() => {
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      const formUrl = `${baseUrl}/form?bookingId=${emailPreview.reservation.bookingId}`;
+      
+      const subject = emailPreview.language === 'ja'
+        ? `【夢殿】ご予約確認とご質問 - ${emailPreview.reservation.checkinDate}ご宿泊`
+        : `【Yumedono】Reservation Confirmation & Questions - Check-in ${emailPreview.reservation.checkinDate}`;
+      
+      const body = emailPreview.language === 'ja'
+        ? `${emailPreview.reservation.guestName} 様
+
+いつもありがとうございます。
+${emailPreview.reservation.checkinDate}より${emailPreview.reservation.nights}泊のご予約をいただき、誠にありがとうございます。
+
+ご宿泊に際しまして、いくつかご質問がございます。
+お決まりになりましたら、下記のフォームよりご回答をお願いいたします。
+
+【ご回答フォーム】
+${formUrl}
+
+上記フォームよりご回答をお待ちしております。
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+夢殿
+予約ID: ${emailPreview.reservation.bookingId}`
+        : `Dear Mr./Ms. ${emailPreview.reservation.guestName}
+
+Hello,
+Thank you for your reservation on ${emailPreview.reservation.checkinDate} for ${emailPreview.reservation.nights} night stay.
+
+We have some questions for you.
+Please inform us your details after you decided.
+
+【Response Form】
+${formUrl}
+
+Please submit your response through the form above.
+If you have any questions, please feel free to contact us.
+
+Best regards,
+Yumedono
+Booking ID: ${emailPreview.reservation.bookingId}`;
+
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setEmailPreview(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <h2 className="text-xl font-semibold">メールプレビュー</h2>
+                <button onClick={() => setEmailPreview(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block font-semibold text-sm mb-1">言語選択</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEmailPreview({ ...emailPreview, language: 'ja' })}
+                      className={`px-4 py-2 rounded ${emailPreview.language === 'ja' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                    >
+                      日本語
+                    </button>
+                    <button
+                      onClick={() => setEmailPreview({ ...emailPreview, language: 'en' })}
+                      className={`px-4 py-2 rounded ${emailPreview.language === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                    >
+                      English
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-sm mb-1">宛先</label>
+                  <div className="text-gray-800">{emailPreview.reservation.email || '（メールアドレス未登録）'}</div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-sm mb-1">件名</label>
+                  <div className="text-gray-800 bg-gray-50 p-2 rounded">{subject}</div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-sm mb-1">本文</label>
+                  <pre className="text-gray-800 bg-gray-50 p-4 rounded whitespace-pre-wrap text-sm font-sans border">{body}</pre>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 flex gap-3">
+                <button onClick={() => setEmailPreview(null)} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                  キャンセル
+                </button>
+                <button
+                  onClick={() => emailPreview.reservation.email && handleSendEmail(emailPreview.reservation.email, subject, body, emailPreview.reservation.bookingId)}
+                  disabled={!emailPreview.reservation.email || sendingEmail}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sendingEmail ? '送信中...' : 'メール送信'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
 
     {/* Response Detail Modal */}
     {viewingResponse && (
