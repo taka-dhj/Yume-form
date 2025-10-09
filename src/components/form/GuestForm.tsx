@@ -28,6 +28,7 @@ type FormData = {
   dietaryNeeds: boolean;
   dietaryDetails: string;
   arrivalTime: string;
+  arrivalTimeConsent: boolean;
   otherNotes: string;
 };
 
@@ -61,6 +62,8 @@ const i18n = {
     dietaryNeeds: '食事に関する特別な配慮が必要ですか？（ベジタリアン/ヴィーガン/ハラル等）',
     dietaryDetails: '詳細を教えてください',
     arrivalTime: '到着予定時刻を教えてください',
+    arrivalTimeNotice: '【到着時刻に関する重要なお願い】\n\n当館では、皆様に最高のお食事体験をお届けするため、お食事は全て当日調理いたしております。\n\n夕食付きプランのお客様へ：\n• ご夕食は17時を目安にご準備させていただきます。\n• 17時以降にご到着された場合、衛生法により作り置きができないため、ご夕食の提供ができかねます。\n• 食材の仕入れや仕込みは既に完了しておりますため、遅延による返金は承りかねます。\n• お客様の安全とお食事の品質を守るための規定でございますので、何卒ご理解賜りますようお願い申し上げます。\n• できる限り17時までのご到着をお願いいたします。',
+    arrivalTimeConsent: '到着時刻に関する注意事項を読み、同意します',
     otherNotes: 'その他ご要望',
     thankYou: 'ご回答ありがとうございました！',
     submitting: '送信中...',
@@ -94,6 +97,8 @@ const i18n = {
     dietaryNeeds: 'Do you have special dietary requirements? (Vegetarian/Vegan/Halal, etc.)',
     dietaryDetails: 'Please specify',
     arrivalTime: 'What time will you arrive?',
+    arrivalTimeNotice: '【Important Notice Regarding Arrival Time】\n\nAt our inn, we prepare all meals fresh on the day to provide you with the finest dining experience.\n\nFor guests with dinner included:\n• We prepare dinner with an arrival time of 5:00 PM in mind.\n• If you arrive after 5:00 PM, we regret that we cannot serve dinner due to hygiene regulations that prohibit keeping prepared food.\n• As ingredients have already been procured and prepared, we are unable to offer refunds for late arrivals.\n• This policy exists to ensure your safety and maintain the quality of our cuisine. We appreciate your understanding.\n• We kindly request that you arrive by 5:00 PM whenever possible.',
+    arrivalTimeConsent: 'I have read and agree to the arrival time notice',
     otherNotes: 'Other requests',
     thankYou: 'Thank you for your response!',
     submitting: 'Submitting...',
@@ -116,6 +121,7 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
     dietaryNeeds: false,
     dietaryDetails: '',
     arrivalTime: '',
+    arrivalTimeConsent: false,
     otherNotes: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -143,6 +149,13 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
         alert(formData.language === 'ja' 
           ? '夕食に関する注意事項に同意してください。' 
           : 'Please agree to the dinner terms.');
+        return;
+      }
+      // Validate arrival time consent if dinner is included or requested
+      if (!formData.arrivalTimeConsent) {
+        alert(formData.language === 'ja' 
+          ? '到着時刻に関する注意事項に同意してください。' 
+          : 'Please agree to the arrival time notice.');
         return;
       }
     }
@@ -356,6 +369,22 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
                 rows={3}
               />
             )}
+          </div>
+        )}
+
+        {/* Arrival time notice and consent (if dinner included or requested) */}
+        {(reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') && (
+          <div className="border border-blue-300 bg-blue-50 p-4 rounded">
+            <pre className="whitespace-pre-wrap text-sm text-gray-800 mb-3 font-sans">{t.arrivalTimeNotice}</pre>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.arrivalTimeConsent}
+                onChange={(e) => setFormData({ ...formData, arrivalTimeConsent: e.target.checked })}
+                className="mt-1"
+              />
+              <span className="text-sm font-semibold">{t.arrivalTimeConsent}</span>
+            </label>
           </div>
         )}
 
