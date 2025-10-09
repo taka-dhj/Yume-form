@@ -15,6 +15,7 @@ export type ReservationRow = {
   initialEmailSent: boolean;
   emailSentAt?: string;
   status: 'pending' | 'email_sent' | 'responded' | 'questioning' | 'completed';
+  notes: string;
 };
 
 const rowBg: Record<ReservationRow['status'], string> = {
@@ -37,6 +38,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [search, setSearch] = useState('');
   const [checkinFilter, setCheckinFilter] = useState(''); // yyyy-mm-dd
   const [updating, setUpdating] = useState<string | null>(null);
+  const [viewingResponse, setViewingResponse] = useState<ReservationRow | null>(null);
 
   const today = useMemo(() => new Date(), []);
 
@@ -87,6 +89,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   }, [reservations, statusFilter, search, checkinFilter]);
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header / Alerts */}
       <div className="rounded-lg border bg-rose-50 border-rose-200 p-4">
@@ -161,7 +164,11 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
               </tr>
             )}
             {filtered.map((r: ReservationRow) => (
-              <tr key={r.bookingId} className={`border-t ${rowBg[r.status]} text-gray-800`}>
+              <tr key={r.bookingId} className={`border-t ${rowBg[r.status]} text-gray-800 ${r.status === 'responded' ? 'cursor-pointer hover:bg-yellow-100' : ''}`} onClick={() => {
+                if (r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') {
+                  setViewingResponse(r);
+                }
+              }}>
                 <Td className="font-mono text-gray-800">{r.bookingId}</Td>
                 <Td className="text-gray-800">{r.guestName}</Td>
                 <Td className="text-gray-800">{r.email}</Td>
@@ -170,7 +177,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 <Td className="text-gray-800">{r.otaName}</Td>
                 <Td className="text-gray-800">{r.dinnerIncluded}</Td>
                 <Td><StatusBadge status={r.status} /></Td>
-                <Td>
+                <Td onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
                     <button className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">メール</button>
                     <select
@@ -193,6 +200,64 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
           </tbody>
         </table>
       </div>
+    </div>
+
+    {/* Response Detail Modal */}
+    {viewingResponse && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setViewingResponse(null)}>
+        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-xl font-semibold">フォーム回答詳細</h2>
+              <button onClick={() => setViewingResponse(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+
+            <div className="space-y-3">
+              <ResponseDetail label="予約ID" value={viewingResponse.bookingId} />
+              <ResponseDetail label="ゲスト名" value={viewingResponse.guestName} />
+              <ResponseDetail label="チェックイン" value={viewingResponse.checkinDate} />
+
+              {viewingResponse.notes && (() => {
+                try {
+                  const formData = JSON.parse(viewingResponse.notes);
+                  return (
+                    <>
+                      {formData.submittedAt && <ResponseDetail label="回答日時" value={new Date(formData.submittedAt).toLocaleString('ja-JP')} />}
+                      {formData.language && <ResponseDetail label="言語" value={formData.language === 'ja' ? '日本語' : 'English'} />}
+                      {formData.hasChildren && <ResponseDetail label="お子様連れ" value={`はい - ${formData.childrenDetails || ''}`} />}
+                      {formData.arrivalCountryDate && <ResponseDetail label="日本到着日" value={formData.arrivalCountryDate} />}
+                      {formData.prevNightPlace && <ResponseDetail label="前泊場所" value={formData.prevNightPlace} />}
+                      {formData.hasPhone && <ResponseDetail label="携帯電話" value={formData.phoneNumber || ''} />}
+                      {formData.dinnerRequest && <ResponseDetail label="夕食追加" value={formData.dinnerRequest === 'yes' ? 'はい' : 'いいえ'} />}
+                      {formData.dietaryNeeds && <ResponseDetail label="食事配慮" value={formData.dietaryDetails || 'あり'} />}
+                      {formData.arrivalTime && <ResponseDetail label="到着時刻" value={formData.arrivalTime} />}
+                      {formData.otherNotes && <ResponseDetail label="その他要望" value={formData.otherNotes} />}
+                    </>
+                  );
+                } catch {
+                  return <ResponseDetail label="回答内容" value={viewingResponse.notes} />;
+                }
+              })()}
+            </div>
+
+            <div className="border-t pt-4">
+              <button onClick={() => setViewingResponse(null)} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
+  );
+}
+
+function ResponseDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-3 gap-2 text-sm">
+      <div className="font-semibold text-gray-600">{label}</div>
+      <div className="col-span-2 text-gray-800">{value}</div>
     </div>
   );
 }
@@ -219,8 +284,8 @@ function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-3 py-2 text-left text-gray-600 font-medium whitespace-nowrap">{children}</th>;
 }
 
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 whitespace-nowrap ${className}`}>{children}</td>;
+function Td({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: (e: React.MouseEvent) => void }) {
+  return <td className={`px-3 py-2 whitespace-nowrap ${className}`} onClick={onClick}>{children}</td>;
 }
 
 

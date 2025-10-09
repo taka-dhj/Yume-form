@@ -32,6 +32,7 @@ export const handler: Handler = async () => {
         initialEmailSent,
         emailSentAt: r.email_sent_at || undefined,
         status,
+        notes: r.notes || '',
       };
     });
 

@@ -34,6 +34,7 @@ export const handler: Handler = async (event) => {
     const [header, ...data] = rows;
     const bookingIdIdx = header.indexOf('booking_id');
     const formRespondedIdx = header.indexOf('form_responded');
+    const notesIdx = header.indexOf('notes');
 
     if (bookingIdIdx === -1) {
       return { statusCode: 500, body: JSON.stringify({ error: 'booking_id column not found' }) };
@@ -46,12 +47,24 @@ export const handler: Handler = async (event) => {
 
     const sheetRowNum = rowIndex + 2; // header=1, data starts at 2
 
-    // Update form_responded flag
+    // Update form_responded flag and save form data to notes column
     const updates: { range: string; values: string[][] }[] = [];
     if (formRespondedIdx !== -1) {
       updates.push({
         range: `Reservations!${String.fromCharCode(65 + formRespondedIdx)}${sheetRowNum}`,
         values: [['TRUE']],
+      });
+    }
+
+    // Save form response JSON to notes column
+    if (notesIdx !== -1) {
+      const formResponseJson = JSON.stringify({
+        submittedAt: new Date().toISOString(),
+        ...formData,
+      });
+      updates.push({
+        range: `Reservations!${String.fromCharCode(65 + notesIdx)}${sheetRowNum}`,
+        values: [[formResponseJson]],
       });
     }
 
@@ -61,10 +74,6 @@ export const handler: Handler = async (event) => {
         requestBody: { data: updates, valueInputOption: 'USER_ENTERED' },
       });
     }
-
-    // Save detailed form response to a separate sheet (optional: FormResponses)
-    // For now, we'll just append to a new sheet or log
-    // TODO: implement FormResponses sheet append if needed
 
     return { statusCode: 200, body: JSON.stringify({ ok: true, bookingId }) };
   } catch (err) {
