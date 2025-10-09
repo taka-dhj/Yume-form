@@ -32,6 +32,20 @@ function isSameDateIso(iso: string, target: Date): boolean {
   return d.getFullYear() === target.getFullYear() && d.getMonth() === target.getMonth() && d.getDate() === target.getDate();
 }
 
+function truncateEmail(email: string, maxLength: number = 25): string {
+  if (!email || email.length <= maxLength) return email;
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  
+  const availableLength = maxLength - domain.length - 4; // -4 for "...@"
+  if (availableLength < 3) return `...@${domain}`;
+  
+  const keepStart = Math.ceil(availableLength / 2);
+  const keepEnd = Math.floor(availableLength / 2);
+  
+  return `${local.slice(0, keepStart)}...${local.slice(-keepEnd)}@${domain}`;
+}
+
 type SortField = 'bookingId' | 'checkinDate' | 'status' | 'none';
 type SortDirection = 'asc' | 'desc';
 
@@ -276,13 +290,15 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                   setViewingResponse(r);
                 }
               }}>
-                <Td className="font-mono text-gray-800">{r.bookingId}</Td>
-                <Td className="text-gray-800">{r.guestName}</Td>
-                <Td className="text-gray-800">{r.email}</Td>
-                <Td className="text-gray-800">{r.checkinDate}</Td>
-                <Td className="text-gray-800">{r.nights}</Td>
-                <Td className="text-gray-800">{r.otaName}</Td>
-                <Td className="text-gray-800">
+                <Td className="font-mono text-gray-800 w-32">{r.bookingId}</Td>
+                <Td className="text-gray-800 w-36">{r.guestName}</Td>
+                <Td className="text-gray-800 w-48" title={r.email}>
+                  {truncateEmail(r.email)}
+                </Td>
+                <Td className="text-gray-800 w-32">{r.checkinDate}</Td>
+                <Td className="text-gray-800 w-20 text-center">{r.nights}</Td>
+                <Td className="text-gray-800 w-32">{r.otaName}</Td>
+                <Td className="text-gray-800 w-20 text-center">
                   {r.dinnerIncluded === 'Yes' ? 'あり' : r.dinnerIncluded === 'No' ? 'なし' : '不明'}
                 </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
@@ -696,8 +712,8 @@ function ThSortable({
   );
 }
 
-function Td({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: (e: React.MouseEvent) => void }) {
-  return <td className={`px-3 py-2 whitespace-nowrap ${className}`} onClick={onClick}>{children}</td>;
+function Td({ children, className = '', onClick, title }: { children: React.ReactNode; className?: string; onClick?: (e: React.MouseEvent) => void; title?: string }) {
+  return <td className={`px-3 py-2 whitespace-nowrap ${className}`} onClick={onClick} title={title}>{children}</td>;
 }
 
 
