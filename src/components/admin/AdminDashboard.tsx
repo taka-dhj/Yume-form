@@ -46,6 +46,8 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [sendingEmail, setSendingEmail] = useState(false);
   const [sortField, setSortField] = useState<SortField>('none');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [perPage, setPerPage] = useState<number>(20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   const today = useMemo(() => new Date(), []);
 
@@ -157,6 +159,17 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
     return result;
   }, [reservations, statusFilter, search, checkinFilter, sortField, sortDirection]);
 
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const paginatedData = useMemo(() => {
+    if (perPage === 0) return filtered; // Show all
+    const start = (currentPage - 1) * perPage;
+    const end = start + perPage;
+    return filtered.slice(start, end);
+  }, [filtered, currentPage, perPage]);
+
+  // Reset to page 1 when filters change
+  const resetPage = () => setCurrentPage(1);
+
   return (
     <>
     <div className="space-y-6">
@@ -188,7 +201,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
         {((['all','pending','responded','questioning','email_sent','completed'] as const) as Array<ReservationRow['status'] | 'all'>).map((s) => (
           <button
             key={s}
-            onClick={() => setStatusFilter(s)}
+            onClick={() => { setStatusFilter(s); resetPage(); }}
             className={`px-3 py-1.5 rounded border text-sm ${statusFilter===s? 'bg-blue-600 text-white border-blue-600':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
           >
             {s === 'all' ? 'すべて' : s}
@@ -200,13 +213,34 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
       <div className="flex flex-col sm:flex-row gap-3">
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); resetPage(); }}
           placeholder="予約ID・氏名・メール・OTAで検索"
           className="flex-1 border rounded px-3 py-2"
         />
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">チェックイン</span>
-          <input type="date" value={checkinFilter} onChange={(e)=>setCheckinFilter(e.target.value)} className="border rounded px-2 py-2" />
+          <input type="date" value={checkinFilter} onChange={(e)=>{ setCheckinFilter(e.target.value); resetPage(); }} className="border rounded px-2 py-2" />
+        </div>
+      </div>
+
+      {/* Pagination controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-gray-600">表示件数:</span>
+          {[10, 20, 50, 0].map((n) => (
+            <button
+              key={n}
+              onClick={() => { setPerPage(n); setCurrentPage(1); }}
+              className={`px-3 py-1 rounded border ${perPage === n ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+            >
+              {n === 0 ? '全件' : n}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-600">
+            {filtered.length}件中 {perPage === 0 ? filtered.length : Math.min((currentPage - 1) * perPage + 1, filtered.length)}-{perPage === 0 ? filtered.length : Math.min(currentPage * perPage, filtered.length)}件を表示
+          </span>
         </div>
       </div>
 
@@ -238,7 +272,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 <td colSpan={9} className="px-3 py-6 text-center text-gray-500">該当データがありません</td>
               </tr>
             )}
-            {filtered.map((r: ReservationRow) => (
+            {paginatedData.map((r: ReservationRow) => (
               <tr key={r.bookingId} className={`border-t ${rowBg[r.status]} text-gray-800 ${r.status === 'responded' ? 'cursor-pointer hover:bg-yellow-100' : ''}`} onClick={() => {
                 if (r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') {
                   setViewingResponse(r);
@@ -271,6 +305,49 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
           </tbody>
         </table>
       </div>
+
+      {/* Page navigation */}
+      {perPage > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            前へ
+          </button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+              let pageNum: number;
+              if (totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (currentPage <= 4) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 3) {
+                pageNum = totalPages - 6 + i;
+              } else {
+                pageNum = currentPage - 3 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-3 py-1 rounded text-sm ${currentPage === pageNum ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-50'}`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            次へ
+          </button>
+        </div>
+      )}
     </div>
 
     {/* Email Preview Modal */}
