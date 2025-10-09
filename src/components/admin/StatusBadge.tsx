@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+
 type Status = 'pending' | 'email_sent' | 'responded' | 'questioning' | 'completed';
 
 const colorByStatus: Record<Status, string> = {
@@ -8,11 +12,55 @@ const colorByStatus: Record<Status, string> = {
   completed: 'bg-green-100 text-green-800 border border-green-300',
 };
 
-export function StatusBadge({ status }: { status: Status }) {
+export function StatusBadge({ 
+  status, 
+  onChange, 
+  disabled 
+}: { 
+  status: Status; 
+  onChange?: (newStatus: Status) => void;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!onChange) {
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-medium inline-block ${colorByStatus[status]}`}>
+        {status}
+      </span>
+    );
+  }
+
   return (
-    <span className={`px-2 py-1 rounded text-xs font-medium inline-block ${colorByStatus[status]}`}>
-      {status}
-    </span>
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`px-2 py-1 rounded text-xs font-medium ${colorByStatus[status]} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+      >
+        {status} ▼
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className="absolute top-full left-0 mt-1 bg-white border rounded shadow-lg z-20 min-w-[140px]">
+            {(['pending', 'email_sent', 'responded', 'questioning', 'completed'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  onChange(s);
+                  setIsOpen(false);
+                }}
+                className={`block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${s === status ? 'font-semibold bg-gray-50' : ''}`}
+              >
+                <span className={`px-2 py-0.5 rounded ${colorByStatus[s]}`}>{s}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

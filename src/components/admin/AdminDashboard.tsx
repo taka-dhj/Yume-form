@@ -32,6 +32,9 @@ function isSameDateIso(iso: string, target: Date): boolean {
   return d.getFullYear() === target.getFullYear() && d.getMonth() === target.getMonth() && d.getDate() === target.getDate();
 }
 
+type SortField = 'bookingId' | 'checkinDate' | 'status' | 'none';
+type SortDirection = 'asc' | 'desc';
+
 export default function AdminDashboard({ reservations }: { reservations: ReservationRow[] }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<ReservationRow['status'] | 'all'>('all');
@@ -41,8 +44,19 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [viewingResponse, setViewingResponse] = useState<ReservationRow | null>(null);
   const [emailPreview, setEmailPreview] = useState<{ reservation: ReservationRow; language: 'ja' | 'en' } | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('none');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const today = useMemo(() => new Date(), []);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const handleStatusChange = async (bookingId: string, newStatus: ReservationRow['status']) => {
     setUpdating(bookingId);
@@ -111,7 +125,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   }, [reservations, today]);
 
   const filtered = useMemo(() => {
-    return reservations.filter(r => {
+    let result = reservations.filter(r => {
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -123,7 +137,25 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
       }
       return true;
     });
-  }, [reservations, statusFilter, search, checkinFilter]);
+
+    // Apply sorting
+    if (sortField !== 'none') {
+      result = [...result].sort((a, b) => {
+        let comparison = 0;
+        if (sortField === 'bookingId') {
+          comparison = a.bookingId.localeCompare(b.bookingId);
+        } else if (sortField === 'checkinDate') {
+          comparison = a.checkinDate.localeCompare(b.checkinDate);
+        } else if (sortField === 'status') {
+          const statusOrder = ['pending', 'email_sent', 'responded', 'questioning', 'completed'];
+          comparison = statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
+        }
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  }, [reservations, statusFilter, search, checkinFilter, sortField, sortDirection]);
 
   return (
     <>
@@ -183,14 +215,20 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
         <table className="min-w-full text-sm text-gray-800">
           <thead className="bg-gray-50 sticky top-0">
             <tr>
-              <Th>Booking ID</Th>
+              <ThSortable field="bookingId" currentField={sortField} direction={sortDirection} onSort={handleSort}>
+                Booking ID
+              </ThSortable>
               <Th>Guest</Th>
               <Th>Email</Th>
-              <Th>Check-in</Th>
+              <ThSortable field="checkinDate" currentField={sortField} direction={sortDirection} onSort={handleSort}>
+                Check-in
+              </ThSortable>
               <Th>Nights</Th>
               <Th>OTA</Th>
               <Th>Dinner</Th>
-              <Th>Status</Th>
+              <ThSortable field="status" currentField={sortField} direction={sortDirection} onSort={handleSort}>
+                Status
+              </ThSortable>
               <Th>Actions</Th>
             </tr>
           </thead>
@@ -213,29 +251,20 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 <Td className="text-gray-800">{r.nights}</Td>
                 <Td className="text-gray-800">{r.otaName}</Td>
                 <Td className="text-gray-800">{r.dinnerIncluded}</Td>
-                <Td><StatusBadge status={r.status} /></Td>
                 <Td onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setEmailPreview({ reservation: r, language: 'ja' })}
-                      className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      メール
-                    </button>
-                    <select
-                      value={r.status}
-                      onChange={(e) => handleStatusChange(r.bookingId, e.target.value as ReservationRow['status'])}
-                      disabled={updating === r.bookingId}
-                      className="text-xs border rounded px-2 py-1 bg-white text-gray-800 disabled:opacity-50"
-                      title="ステータス変更"
-                    >
-                      <option value="pending">pending</option>
-                      <option value="email_sent">email_sent</option>
-                      <option value="responded">responded</option>
-                      <option value="questioning">questioning</option>
-                      <option value="completed">completed</option>
-                    </select>
-                  </div>
+                  <StatusBadge 
+                    status={r.status} 
+                    onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
+                    disabled={updating === r.bookingId}
+                  />
+                </Td>
+                <Td onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    onClick={() => setEmailPreview({ reservation: r, language: 'ja' })}
+                    className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    メール
+                  </button>
                 </Td>
               </tr>
             ))}
@@ -430,6 +459,38 @@ function SummaryCard({ label, count, sublabel, color = 'gray' }: { label: string
 
 function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-3 py-2 text-left text-gray-600 font-medium whitespace-nowrap">{children}</th>;
+}
+
+function ThSortable({ 
+  children, 
+  field, 
+  currentField, 
+  direction, 
+  onSort 
+}: { 
+  children: React.ReactNode; 
+  field: SortField; 
+  currentField: SortField; 
+  direction: SortDirection; 
+  onSort: (field: SortField) => void;
+}) {
+  const isActive = currentField === field;
+  return (
+    <th className="px-3 py-2 text-left text-gray-600 font-medium whitespace-nowrap">
+      <button
+        onClick={() => onSort(field)}
+        className="flex items-center gap-1 hover:text-gray-900"
+      >
+        {children}
+        {isActive && (
+          <span className="text-xs">{direction === 'asc' ? '↑' : '↓'}</span>
+        )}
+        {!isActive && (
+          <span className="text-xs text-gray-400">⇅</span>
+        )}
+      </button>
+    </th>
+  );
 }
 
 function Td({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: (e: React.MouseEvent) => void }) {
