@@ -152,6 +152,39 @@ Yumedono
 Booking ID: ${vars.bookingId}`,
     },
   },
+  reception: {
+    ja: {
+      subject: (vars: TemplateVars) => `【夢殿】ご予約受付完了 - ${vars.checkinDate}ご宿泊`,
+      body: (vars: TemplateVars) => `${vars.guestName} 様
+
+いつもありがとうございます。
+
+${vars.checkinDate}より${vars.nights}泊のご予約につきまして、ご回答をいただき誠にありがとうございました。
+受付が完了いたしましたことをご報告申し上げます。
+
+当日は心よりお待ちしております。
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+夢殿
+予約ID: ${vars.bookingId}`,
+    },
+    en: {
+      subject: (vars: TemplateVars) => `【Yumedono】Reception Completed - Check-in ${vars.checkinDate}`,
+      body: (vars: TemplateVars) => `Dear Mr./Ms. ${vars.guestName}
+
+Hello,
+
+Thank you for your response regarding your reservation on ${vars.checkinDate} for ${vars.nights} night stay.
+We are pleased to inform you that your reception is now complete.
+
+We look forward to welcoming you on the day.
+If you have any questions, please feel free to contact us.
+
+Best regards,
+Yumedono
+Booking ID: ${vars.bookingId}`,
+    },
+  },
 };
 
 export function generateEmail(
@@ -165,12 +198,17 @@ export function generateEmail(
   vars: ReminderVars
 ): { subject: string; body: string };
 export function generateEmail(
-  type: 'initial' | 'reminder',
+  type: 'reception',
+  language: 'ja' | 'en',
+  vars: TemplateVars
+): { subject: string; body: string };
+export function generateEmail(
+  type: 'initial' | 'reminder' | 'reception',
   language: 'ja' | 'en',
   vars: TemplateVars | ReminderVars
 ): { subject: string; body: string } {
-  if (type === 'initial') {
-    const template = emailTemplates.initial[language];
+  if (type === 'initial' || type === 'reception') {
+    const template = emailTemplates[type][language];
     return {
       subject: template.subject(vars as TemplateVars),
       body: template.body(vars as TemplateVars),

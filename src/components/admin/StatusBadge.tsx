@@ -12,6 +12,14 @@ const colorByStatus: Record<Status, string> = {
   completed: 'bg-green-100 text-green-800 border border-green-300',
 };
 
+const statusLabel: Record<Status, string> = {
+  pending: '未送信',
+  email_sent: '回答待ち',
+  responded: '回答済み',
+  questioning: '質問中',
+  completed: '受付完了',
+};
+
 export function StatusBadge({ 
   status, 
   onChange, 
@@ -26,7 +34,7 @@ export function StatusBadge({
   if (!onChange) {
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium inline-block ${colorByStatus[status]}`}>
-        {status}
+        {statusLabel[status]}
       </span>
     );
   }
@@ -38,7 +46,7 @@ export function StatusBadge({
         disabled={disabled}
         className={`px-2 py-1 rounded text-xs font-medium ${colorByStatus[status]} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
       >
-        {status} ▼
+        {statusLabel[status]} ▼
       </button>
 
       {isOpen && (
@@ -54,7 +62,7 @@ export function StatusBadge({
                 }}
                 className={`block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${s === status ? 'font-semibold bg-gray-50' : ''}`}
               >
-                <span className={`px-2 py-0.5 rounded ${colorByStatus[s]}`}>{s}</span>
+                <span className={`px-2 py-0.5 rounded ${colorByStatus[s]}`}>{statusLabel[s]}</span>
               </button>
             ))}
           </div>

@@ -42,7 +42,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [checkinFilter, setCheckinFilter] = useState(''); // yyyy-mm-dd
   const [updating, setUpdating] = useState<string | null>(null);
   const [viewingResponse, setViewingResponse] = useState<ReservationRow | null>(null);
-  const [emailPreview, setEmailPreview] = useState<{ reservation: ReservationRow; language: 'ja' | 'en' } | null>(null);
+  const [emailPreview, setEmailPreview] = useState<{ reservation: ReservationRow; language: 'ja' | 'en'; type: 'initial' | 'reception'; editableSubject?: string; editableBody?: string } | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [sortField, setSortField] = useState<SortField>('none');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -188,12 +188,10 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <SummaryCard label="未送信" count={counts.c.pending} sublabel="要メール送信" color="red" />
-        <SummaryCard label="回答待ち" count={counts.c.email_sent} sublabel="催促対象: 0件" color="blue" />
-        <SummaryCard label="質問中" count={counts.c.questioning} sublabel="個別対応中" color="orange" />
-        <SummaryCard label="受付完了" count={counts.c.completed} sublabel="本日チェックイン:"
-          color="green"
-        />
+        <SummaryCard label="未送信" count={counts.c.pending} sublabel="要メール送信" color="red" onClick={() => { setStatusFilter('pending'); resetPage(); }} />
+        <SummaryCard label="回答待ち" count={counts.c.email_sent} sublabel={`催促対象: ${counts.reminderDue}件`} color="blue" onClick={() => { setStatusFilter('email_sent'); resetPage(); }} />
+        <SummaryCard label="質問中" count={counts.c.questioning} sublabel="個別対応中" color="orange" onClick={() => { setStatusFilter('questioning'); resetPage(); }} />
+        <SummaryCard label="受付完了" count={counts.c.completed} sublabel="本日チェックイン:" color="green" onClick={() => { setStatusFilter('completed'); resetPage(); }} />
       </div>
 
       {/* Filters */}
@@ -250,20 +248,20 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
           <thead className="bg-gray-50 sticky top-0">
             <tr>
               <ThSortable field="bookingId" currentField={sortField} direction={sortDirection} onSort={handleSort}>
-                Booking ID
+                予約番号
               </ThSortable>
-              <Th>Guest</Th>
+              <Th>氏名</Th>
               <Th>Email</Th>
               <ThSortable field="checkinDate" currentField={sortField} direction={sortDirection} onSort={handleSort}>
-                Check-in
+                チェックイン日
               </ThSortable>
-              <Th>Nights</Th>
+              <Th>宿泊日数</Th>
               <Th>OTA</Th>
-              <Th>Dinner</Th>
+              <Th>夕食</Th>
               <ThSortable field="status" currentField={sortField} direction={sortDirection} onSort={handleSort}>
-                Status
+                ステータス
               </ThSortable>
-              <Th>Actions</Th>
+              <Th>メール送信</Th>
             </tr>
           </thead>
           <tbody>
@@ -284,7 +282,9 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 <Td className="text-gray-800">{r.checkinDate}</Td>
                 <Td className="text-gray-800">{r.nights}</Td>
                 <Td className="text-gray-800">{r.otaName}</Td>
-                <Td className="text-gray-800">{r.dinnerIncluded}</Td>
+                <Td className="text-gray-800">
+                  {r.dinnerIncluded === 'Yes' ? 'あり' : r.dinnerIncluded === 'No' ? 'なし' : '不明'}
+                </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
                   <StatusBadge 
                     status={r.status} 
@@ -293,12 +293,28 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                   />
                 </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
-                  <button 
-                    onClick={() => setEmailPreview({ reservation: r, language: 'ja' })}
-                    className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    メール
-                  </button>
+                  <div className="flex flex-col gap-1">
+                    {r.status === 'pending' ? (
+                      <button 
+                        onClick={() => setEmailPreview({ reservation: r, language: 'ja', type: 'initial' })}
+                        className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 whitespace-nowrap"
+                      >
+                        回答依頼
+                      </button>
+                    ) : (
+                      <span className="px-2 py-1 text-xs bg-green-100 text-green-800 border border-green-300 rounded whitespace-nowrap">
+                        送信済み
+                      </span>
+                    )}
+                    {(r.status === 'responded' || r.status === 'questioning') && (
+                      <button 
+                        onClick={() => setEmailPreview({ reservation: r, language: 'ja', type: 'reception' })}
+                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+                      >
+                        受付完了
+                      </button>
+                    )}
+                  </div>
                 </Td>
               </tr>
             ))}
@@ -355,11 +371,16 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       const formUrl = `${baseUrl}/form?bookingId=${emailPreview.reservation.bookingId}`;
       
-      const subject = emailPreview.language === 'ja'
-        ? `【夢殿】ご予約確認とご質問 - ${emailPreview.reservation.checkinDate}ご宿泊`
-        : `【Yumedono】Reservation Confirmation & Questions - Check-in ${emailPreview.reservation.checkinDate}`;
+      const defaultSubject = emailPreview.type === 'initial'
+        ? (emailPreview.language === 'ja'
+          ? `【夢殿】ご予約確認とご質問 - ${emailPreview.reservation.checkinDate}ご宿泊`
+          : `【Yumedono】Reservation Confirmation & Questions - Check-in ${emailPreview.reservation.checkinDate}`)
+        : (emailPreview.language === 'ja'
+          ? `【夢殿】ご予約受付完了 - ${emailPreview.reservation.checkinDate}ご宿泊`
+          : `【Yumedono】Reception Completed - Check-in ${emailPreview.reservation.checkinDate}`);
       
-      const body = emailPreview.language === 'ja'
+      const defaultBody = emailPreview.type === 'initial'
+        ? (emailPreview.language === 'ja'
         ? `${emailPreview.reservation.guestName} 様
 
 いつもありがとうございます。
@@ -392,7 +413,36 @@ If you have any questions, please feel free to contact us.
 
 Best regards,
 Yumedono
-Booking ID: ${emailPreview.reservation.bookingId}`;
+Booking ID: ${emailPreview.reservation.bookingId}`)
+        : (emailPreview.language === 'ja'
+          ? `${emailPreview.reservation.guestName} 様
+
+いつもありがとうございます。
+
+${emailPreview.reservation.checkinDate}より${emailPreview.reservation.nights}泊のご予約につきまして、ご回答をいただき誠にありがとうございました。
+受付が完了いたしましたことをご報告申し上げます。
+
+当日は心よりお待ちしております。
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+夢殿
+予約ID: ${emailPreview.reservation.bookingId}`
+          : `Dear Mr./Ms. ${emailPreview.reservation.guestName}
+
+Hello,
+
+Thank you for your response regarding your reservation on ${emailPreview.reservation.checkinDate} for ${emailPreview.reservation.nights} night stay.
+We are pleased to inform you that your reception is now complete.
+
+We look forward to welcoming you on the day.
+If you have any questions, please feel free to contact us.
+
+Best regards,
+Yumedono
+Booking ID: ${emailPreview.reservation.bookingId}`);
+
+      const currentSubject = emailPreview.editableSubject ?? defaultSubject;
+      const currentBody = emailPreview.editableBody ?? defaultBody;
 
       return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setEmailPreview(null)}>
@@ -408,13 +458,13 @@ Booking ID: ${emailPreview.reservation.bookingId}`;
                   <label className="block font-semibold text-sm mb-1">言語選択</label>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setEmailPreview({ ...emailPreview, language: 'ja' })}
+                      onClick={() => setEmailPreview({ reservation: emailPreview.reservation, type: emailPreview.type, language: 'ja', editableSubject: undefined, editableBody: undefined })}
                       className={`px-4 py-2 rounded ${emailPreview.language === 'ja' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
                     >
                       日本語
                     </button>
                     <button
-                      onClick={() => setEmailPreview({ ...emailPreview, language: 'en' })}
+                      onClick={() => setEmailPreview({ reservation: emailPreview.reservation, type: emailPreview.type, language: 'en', editableSubject: undefined, editableBody: undefined })}
                       className={`px-4 py-2 rounded ${emailPreview.language === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
                     >
                       English
@@ -429,12 +479,22 @@ Booking ID: ${emailPreview.reservation.bookingId}`;
 
                 <div>
                   <label className="block font-semibold text-sm mb-1">件名</label>
-                  <div className="text-gray-800 bg-gray-50 p-2 rounded">{subject}</div>
+                  <input
+                    type="text"
+                    value={currentSubject}
+                    onChange={(e) => setEmailPreview({ ...emailPreview, editableSubject: e.target.value })}
+                    className="w-full border rounded px-3 py-2 text-gray-800"
+                  />
                 </div>
 
                 <div>
                   <label className="block font-semibold text-sm mb-1">本文</label>
-                  <pre className="text-gray-800 bg-gray-50 p-4 rounded whitespace-pre-wrap text-sm font-sans border">{body}</pre>
+                  <textarea
+                    value={currentBody}
+                    onChange={(e) => setEmailPreview({ ...emailPreview, editableBody: e.target.value })}
+                    className="w-full border rounded px-3 py-2 text-gray-800 font-sans text-sm"
+                    rows={15}
+                  />
                 </div>
               </div>
 
@@ -443,7 +503,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`;
                   キャンセル
                 </button>
                 <button
-                  onClick={() => emailPreview.reservation.email && handleSendEmail(emailPreview.reservation.email, subject, body, emailPreview.reservation.bookingId)}
+                  onClick={() => emailPreview.reservation.email && handleSendEmail(emailPreview.reservation.email, currentSubject, currentBody, emailPreview.reservation.bookingId)}
                   disabled={!emailPreview.reservation.email || sendingEmail}
                   className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -516,7 +576,7 @@ function ResponseDetail({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SummaryCard({ label, count, sublabel, color = 'gray' }: { label: string; count: number; sublabel?: string; color?: 'red' | 'green' | 'orange' | 'blue' | 'gray' }) {
+function SummaryCard({ label, count, sublabel, color = 'gray', onClick }: { label: string; count: number; sublabel?: string; color?: 'red' | 'green' | 'orange' | 'blue' | 'gray'; onClick?: () => void }) {
   const palette: Record<string, { bg: string; border: string; text: string }> = {
     red: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' },
     blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
@@ -526,7 +586,10 @@ function SummaryCard({ label, count, sublabel, color = 'gray' }: { label: string
   };
   const c = palette[color] ?? palette.gray;
   return (
-    <div className={`rounded border ${c.bg} ${c.border} p-4`}>
+    <div 
+      className={`rounded border ${c.bg} ${c.border} p-4 ${onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+      onClick={onClick}
+    >
       <div className={`text-sm ${c.text}`}>{label}</div>
       <div className="text-3xl font-semibold mt-1">{count}</div>
       {sublabel ? <div className="text-xs text-gray-500 mt-1">{sublabel}</div> : null}
