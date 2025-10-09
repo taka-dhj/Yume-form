@@ -56,7 +56,8 @@ const i18n = {
     hasPhone: '日本国内で使える携帯電話をお持ちですか？',
     phoneNumber: '電話番号を入力してください',
     dinnerRequest: '夕食を追加しますか？（1名24,000円）',
-    dinnerConsent: '夕食に関する注意事項を読みました',
+    dinnerNotice: '【夕食に関する重要なお知らせ】\n\n夕食付きプランの方へ：\n• 17時以降のご到着の場合、夕食の提供ができません。\n• 衛生法上、作り置きができないため、ご予約済みでも廃棄することになります。\n• その場合でも料金はいただきますのでご了承ください。\n• できる限り17時までにご到着ください。\n\n夕食を追加される方へ：\n• 追加料金：1名様24,000円（当日お支払い）\n• 夕食の準備のため、当日の追加はできません。1週間前までにご予約ください。\n• 追加希望の方も17時までのご到着をお願いします。\n\n食事内容について：\n• 海鮮を多く使った日本料理（懐石コース）です。\n• メニューは料理長におまかせとなります。お客様による指定はできません。\n• 重度の食物アレルギーや魚介類が食べられない方には、夕食・朝食ともに提供できません。命に関わるアレルギーをお持ちの方は、安全上の理由からお食事を提供できませんのでご了承ください。',
+    dinnerConsent: '上記の夕食に関する注意事項を読み、同意します',
     dietaryNeeds: '食事に関する特別な配慮が必要ですか？（ベジタリアン/ヴィーガン/ハラル等）',
     dietaryDetails: '詳細を教えてください',
     arrivalTime: '到着予定時刻を教えてください',
@@ -88,7 +89,8 @@ const i18n = {
     hasPhone: 'Do you have a cellular phone usable in Japan?',
     phoneNumber: 'Please enter your phone number',
     dinnerRequest: 'Would you like to add dinner? (24,000 JPY per person)',
-    dinnerConsent: 'I have read the dinner terms',
+    dinnerNotice: '【Important Information About Dinner】\n\nFor guests with dinner included:\n• If you arrive after 5:00 PM, we cannot provide dinner.\n• Due to hygiene regulations, we cannot prepare meals in advance. The dinner will be discarded even if you have booked it.\n• In this case, you will still be charged for the dinner. Please understand.\n• We hope you arrive by 5:00 PM at the latest.\n\nFor guests adding dinner:\n• Additional fee: 24,000 JPY per person (payable on check-in)\n• We cannot accept same-day dinner additions. Please book at least one week in advance.\n• Guests adding dinner should also arrive by 5:00 PM.\n\nAbout the dinner menu:\n• Japanese Kaiseki course featuring seafood.\n• The menu is at the chef\'s discretion. Guests cannot specify the menu.\n• We cannot provide meals (both dinner and breakfast) to guests with serious food allergies or who cannot eat seafood. If you have life-threatening allergies, we cannot provide meals for safety reasons. Please understand.',
+    dinnerConsent: 'I have read and agree to the above dinner terms',
     dietaryNeeds: 'Do you have special dietary requirements? (Vegetarian/Vegan/Halal, etc.)',
     dietaryDetails: 'Please specify',
     arrivalTime: 'What time will you arrive?',
@@ -135,6 +137,16 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
   };
 
   const handleSubmit = async () => {
+    // Validate dinner consent if dinner is included or requested
+    if (reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') {
+      if (!formData.dinnerConsent) {
+        alert(formData.language === 'ja' 
+          ? '夕食に関する注意事項に同意してください。' 
+          : 'Please agree to the dinner terms.');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/.netlify/functions/form-submit', {
@@ -298,6 +310,22 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
                 {t.no}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Dinner notice and consent (if dinner included or requested) */}
+        {(reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') && (
+          <div className="border border-orange-300 bg-orange-50 p-4 rounded">
+            <pre className="whitespace-pre-wrap text-sm text-gray-800 mb-3 font-sans">{t.dinnerNotice}</pre>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.dinnerConsent}
+                onChange={(e) => setFormData({ ...formData, dinnerConsent: e.target.checked })}
+                className="mt-1"
+              />
+              <span className="text-sm font-semibold">{t.dinnerConsent}</span>
+            </label>
           </div>
         )}
 
