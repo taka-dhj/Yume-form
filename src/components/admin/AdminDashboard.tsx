@@ -266,6 +266,9 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
               <ThSortable field="bookingId" currentField={sortField} direction={sortDirection} onSort={handleSort}>
                 予約番号
               </ThSortable>
+              <ThSortable field="status" currentField={sortField} direction={sortDirection} onSort={handleSort}>
+                ステータス
+              </ThSortable>
               <Th>氏名</Th>
               <Th>Email</Th>
               <ThSortable field="checkinDate" currentField={sortField} direction={sortDirection} onSort={handleSort}>
@@ -274,9 +277,6 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
               <Th>宿泊日数</Th>
               <Th>OTA</Th>
               <Th>夕食</Th>
-              <ThSortable field="status" currentField={sortField} direction={sortDirection} onSort={handleSort}>
-                ステータス
-              </ThSortable>
               <Th>メール送信</Th>
             </tr>
           </thead>
@@ -293,16 +293,6 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 }
               }}>
                 <Td className="font-mono text-gray-800 w-32">{r.bookingId}</Td>
-                <Td className="text-gray-800 w-36">{r.guestName}</Td>
-                <Td className="text-gray-800 w-48" title={r.email}>
-                  {truncateEmail(r.email)}
-                </Td>
-                <Td className="text-gray-800 w-32">{r.checkinDate}</Td>
-                <Td className="text-gray-800 w-20 text-center">{r.nights}</Td>
-                <Td className="text-gray-800 w-32">{r.otaName}</Td>
-                <Td className="text-gray-800 w-20 text-center">
-                  {r.dinnerIncluded === 'Yes' ? 'あり' : r.dinnerIncluded === 'No' ? 'なし' : '不明'}
-                </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
                     <StatusBadge 
@@ -328,6 +318,16 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                       return null;
                     })()}
                   </div>
+                </Td>
+                <Td className="text-gray-800 w-36">{r.guestName}</Td>
+                <Td className="text-gray-800 w-48" title={r.email}>
+                  {truncateEmail(r.email)}
+                </Td>
+                <Td className="text-gray-800 w-32">{r.checkinDate}</Td>
+                <Td className="text-gray-800 w-20 text-center">{r.nights}</Td>
+                <Td className="text-gray-800 w-32">{r.otaName}</Td>
+                <Td className="text-gray-800 w-20 text-center">
+                  {r.dinnerIncluded === 'Yes' ? 'あり' : r.dinnerIncluded === 'No' ? 'なし' : '不明'}
                 </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
                   <div className="flex flex-col gap-1">
