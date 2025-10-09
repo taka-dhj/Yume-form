@@ -65,6 +65,9 @@ const i18n = {
     arrivalTimeNotice: '【到着時刻に関する重要なお願い】\n\n当館では、皆様に最高のお食事体験をお届けするため、お食事は全て当日調理いたしております。\n\n夕食付きプランのお客様へ：\n• ご夕食は17時を目安にご準備させていただきます。\n• 17時以降にご到着された場合、衛生法により作り置きができないため、ご夕食の提供ができかねます。\n• 食材の仕入れや仕込みは既に完了しておりますため、遅延による返金は承りかねます。\n• お客様の安全とお食事の品質を守るための規定でございますので、何卒ご理解賜りますようお願い申し上げます。\n• できる限り17時までのご到着をお願いいたします。',
     arrivalTimeConsent: '到着時刻に関する注意事項を読み、同意します',
     otherNotes: 'その他ご要望',
+    reviewTitle: '入力内容の確認',
+    reviewMessage: '以下の内容でよろしいですか？',
+    edit: '修正する',
     thankYou: 'ご回答ありがとうございました！',
     submitting: '送信中...',
   },
@@ -100,13 +103,16 @@ const i18n = {
     arrivalTimeNotice: '【Important Notice Regarding Arrival Time】\n\nAt our inn, we prepare all meals fresh on the day to provide you with the finest dining experience.\n\nFor guests with dinner included:\n• We prepare dinner with an arrival time of 5:00 PM in mind.\n• If you arrive after 5:00 PM, we regret that we cannot serve dinner due to hygiene regulations that prohibit keeping prepared food.\n• As ingredients have already been procured and prepared, we are unable to offer refunds for late arrivals.\n• This policy exists to ensure your safety and maintain the quality of our cuisine. We appreciate your understanding.\n• We kindly request that you arrive by 5:00 PM whenever possible.',
     arrivalTimeConsent: 'I have read and agree to the arrival time notice',
     otherNotes: 'Other requests',
+    reviewTitle: 'Review Your Responses',
+    reviewMessage: 'Please confirm the information below:',
+    edit: 'Edit',
     thankYou: 'Thank you for your response!',
     submitting: 'Submitting...',
   },
 };
 
 export default function GuestForm({ reservation }: { reservation: ReservationData }) {
-  const [step, setStep] = useState<'language' | 'confirm' | 'questions' | 'complete'>('language');
+  const [step, setStep] = useState<'language' | 'confirm' | 'questions' | 'review' | 'complete'>('language');
   const [formData, setFormData] = useState<FormData>({
     language: 'en',
     reservationConfirmed: false,
@@ -415,9 +421,57 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
             {t.back}
           </button>
           <button
+            onClick={() => setStep('review')}
+            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            {t.next}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'review') {
+    return (
+      <div className="bg-white rounded-lg shadow p-6 space-y-6">
+        <h1 className="text-2xl font-semibold mb-4">{t.reviewTitle}</h1>
+        <p className="text-gray-600 mb-4">{t.reviewMessage}</p>
+
+        <div className="space-y-4 border-t pt-4">
+          {formData.hasChildren && (
+            <ReviewItem label={t.hasChildren} value={`${t.yes} - ${formData.childrenDetails}`} />
+          )}
+          {formData.arrivalCountryDate && (
+            <ReviewItem label={t.arrivalCountryDate} value={formData.arrivalCountryDate} />
+          )}
+          {formData.prevNightPlace && (
+            <ReviewItem label={t.prevNightPlace} value={formData.prevNightPlace} />
+          )}
+          {formData.hasPhone && (
+            <ReviewItem label={t.phoneNumber} value={formData.phoneNumber} />
+          )}
+          {reservation.dinnerIncluded !== 'Yes' && formData.dinnerRequest && (
+            <ReviewItem label={t.dinnerRequest} value={formData.dinnerRequest === 'yes' ? t.yes : t.no} />
+          )}
+          {(reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') && formData.dietaryNeeds && (
+            <ReviewItem label={t.dietaryNeeds} value={`${t.yes} - ${formData.dietaryDetails}`} />
+          )}
+          {formData.arrivalTime && (
+            <ReviewItem label={t.arrivalTime} value={formData.arrivalTime} />
+          )}
+          {formData.otherNotes && (
+            <ReviewItem label={t.otherNotes} value={formData.otherNotes} />
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-4 border-t">
+          <button onClick={() => setStep('questions')} className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+            {t.edit}
+          </button>
+          <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
           >
             {submitting ? t.submitting : t.submit}
           </button>
@@ -436,5 +490,14 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
   }
 
   return null;
+}
+
+function ReviewItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="font-semibold text-gray-700">{label}</div>
+      <div className="sm:col-span-2 text-gray-800">{value}</div>
+    </div>
+  );
 }
 
