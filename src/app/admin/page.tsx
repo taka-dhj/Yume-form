@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import AdminDashboard, { type ReservationRow } from '@/components/admin/AdminDashboard';
+import RefreshButton from '@/components/admin/RefreshButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,10 @@ export default async function AdminPage() {
       <div className="max-w-6xl mx-auto space-y-5">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-tight">Yumedono 受付管理システム</h1>
-          <Link href="/" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">Home</Link>
+          <div className="flex items-center gap-3">
+            <RefreshButton />
+            <Link href="/" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">Home</Link>
+          </div>
         </div>
         <AdminDashboard reservations={reservations} />
       </div>
