@@ -242,8 +242,8 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto border rounded">
+      {/* Table - Desktop */}
+      <div className="hidden md:block overflow-x-auto border rounded">
         <table className="min-w-full text-sm text-gray-800">
           <thead className="bg-gray-50 sticky top-0">
             <tr>
@@ -320,6 +320,69 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Card View - Mobile */}
+      <div className="md:hidden space-y-3">
+        {paginatedData.length === 0 && (
+          <div className="bg-white border rounded p-6 text-center text-gray-500">該当データがありません</div>
+        )}
+        {paginatedData.map((r: ReservationRow) => (
+          <div
+            key={r.bookingId}
+            className={`${rowBg[r.status]} border rounded p-4 space-y-3`}
+            onClick={() => {
+              if (r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') {
+                setViewingResponse(r);
+              }
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="font-mono text-sm font-semibold text-gray-800">{r.bookingId}</div>
+                <div className="text-gray-800 mt-1">{r.guestName}</div>
+                <div className="text-xs text-gray-600 mt-1">{r.email}</div>
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <StatusBadge 
+                  status={r.status} 
+                  onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
+                  disabled={updating === r.bookingId}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
+              <div><span className="font-semibold">チェックイン:</span> {r.checkinDate}</div>
+              <div><span className="font-semibold">宿泊日数:</span> {r.nights}泊</div>
+              <div><span className="font-semibold">OTA:</span> {r.otaName}</div>
+              <div><span className="font-semibold">夕食:</span> {r.dinnerIncluded === 'Yes' ? 'あり' : r.dinnerIncluded === 'No' ? 'なし' : '不明'}</div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+              {r.status === 'pending' ? (
+                <button 
+                  onClick={() => setEmailPreview({ reservation: r, language: 'ja', type: 'initial' })}
+                  className="flex-1 px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  回答依頼
+                </button>
+              ) : (
+                <div className="flex-1 px-3 py-2 text-xs bg-green-100 text-green-800 border border-green-300 rounded text-center">
+                  送信済み
+                </div>
+              )}
+              {(r.status === 'responded' || r.status === 'questioning') && (
+                <button 
+                  onClick={() => setEmailPreview({ reservation: r, language: 'ja', type: 'reception' })}
+                  className="flex-1 px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  受付完了
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Page navigation */}
