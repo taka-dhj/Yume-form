@@ -94,8 +94,19 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
     reservations.forEach(r => { c[r.status] += 1; });
     const urgentUnsent = c.pending;
     const todayNotCompleted = reservations.filter(r => isSameDateIso(r.checkinDate, today) && r.status !== 'completed').length;
-    // reminderDue is placeholder (0) until scheduled logic is added
-    const reminderDue = 0;
+    
+    // Calculate reminder due (email_sent status with check-in within 30 days)
+    const reminderThresholds = [30, 21, 14, 7];
+    const reminderDue = reservations.filter(r => {
+      if (r.status !== 'email_sent') return false;
+      const checkin = new Date(r.checkinDate);
+      checkin.setHours(0, 0, 0, 0);
+      const todayCopy = new Date(today);
+      todayCopy.setHours(0, 0, 0, 0);
+      const daysUntil = Math.ceil((checkin.getTime() - todayCopy.getTime()) / (1000 * 60 * 60 * 24));
+      return reminderThresholds.includes(daysUntil);
+    }).length;
+    
     return { c, urgentUnsent, reminderDue, todayNotCompleted };
   }, [reservations, today]);
 

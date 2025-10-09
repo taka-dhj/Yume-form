@@ -6,6 +6,14 @@ type TemplateVars = {
   formUrl: string;
 };
 
+type ReminderVars = {
+  guestName: string;
+  bookingId: string;
+  checkinDate: string;
+  daysUntilCheckin: number;
+  formUrl: string;
+};
+
 export const emailTemplates = {
   initial: {
     ja: {
@@ -97,17 +105,82 @@ Yumedono
 Booking ID: ${vars.bookingId}`,
     },
   },
+  reminder: {
+    ja: {
+      subject: (vars: ReminderVars) => `【夢殿】ご回答のお願い（再送）- ${vars.checkinDate}ご宿泊`,
+      body: (vars: ReminderVars) => `${vars.guestName} 様
+
+いつもありがとうございます。
+
+${vars.checkinDate}のご宿泊まで、残り${vars.daysUntilCheckin}日となりました。
+
+以前お送りしたご質問フォームへのご回答をまだいただけておりません。
+スムーズなご案内のため、お早めのご回答をお願いいたします。
+
+【ご回答フォーム】
+${vars.formUrl}
+
+ご回答いただけていない場合は、お手数ですが上記フォームよりご回答をお願いいたします。
+すでにご回答済みの場合は、本メールをご放念ください。
+
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+夢殿
+予約ID: ${vars.bookingId}`,
+    },
+    en: {
+      subject: (vars: ReminderVars) => `【Yumedono】Reminder: Response Needed - Check-in ${vars.checkinDate}`,
+      body: (vars: ReminderVars) => `Dear Mr./Ms. ${vars.guestName}
+
+Hello,
+
+Your check-in date (${vars.checkinDate}) is ${vars.daysUntilCheckin} days away.
+
+We have not yet received your response to our questionnaire.
+To ensure a smooth check-in experience, we kindly request your response as soon as possible.
+
+【Response Form】
+${vars.formUrl}
+
+If you have not responded yet, please submit your answers through the form above.
+If you have already responded, please disregard this email.
+
+If you have any questions, please feel free to contact us.
+
+Best regards,
+Yumedono
+Booking ID: ${vars.bookingId}`,
+    },
+  },
 };
 
 export function generateEmail(
   type: 'initial',
   language: 'ja' | 'en',
   vars: TemplateVars
+): { subject: string; body: string };
+export function generateEmail(
+  type: 'reminder',
+  language: 'ja' | 'en',
+  vars: ReminderVars
+): { subject: string; body: string };
+export function generateEmail(
+  type: 'initial' | 'reminder',
+  language: 'ja' | 'en',
+  vars: TemplateVars | ReminderVars
 ): { subject: string; body: string } {
-  const template = emailTemplates[type][language];
-  return {
-    subject: template.subject(vars),
-    body: template.body(vars),
-  };
+  if (type === 'initial') {
+    const template = emailTemplates.initial[language];
+    return {
+      subject: template.subject(vars as TemplateVars),
+      body: template.body(vars as TemplateVars),
+    };
+  } else {
+    const template = emailTemplates.reminder[language];
+    return {
+      subject: template.subject(vars as ReminderVars),
+      body: template.body(vars as ReminderVars),
+    };
+  }
 }
 
