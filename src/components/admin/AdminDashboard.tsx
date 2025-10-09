@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 
 export type ReservationRow = {
@@ -31,11 +32,34 @@ function isSameDateIso(iso: string, target: Date): boolean {
 }
 
 export default function AdminDashboard({ reservations }: { reservations: ReservationRow[] }) {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<ReservationRow['status'] | 'all'>('all');
   const [search, setSearch] = useState('');
   const [checkinFilter, setCheckinFilter] = useState(''); // yyyy-mm-dd
+  const [updating, setUpdating] = useState<string | null>(null);
 
   const today = useMemo(() => new Date(), []);
+
+  const handleStatusChange = async (bookingId: string, newStatus: ReservationRow['status']) => {
+    setUpdating(bookingId);
+    try {
+      const res = await fetch('/.netlify/functions/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, status: newStatus }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to update status: ${err.error || 'Unknown error'}`);
+      } else {
+        router.refresh();
+      }
+    } catch (err) {
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUpdating(null);
+    }
+  };
 
   const counts = useMemo(() => {
     const c = { pending: 0, email_sent: 0, responded: 0, questioning: 0, completed: 0 } as Record<ReservationRow['status'], number>;
@@ -147,7 +171,22 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 <Td className="text-gray-800">{r.dinnerIncluded}</Td>
                 <Td><StatusBadge status={r.status} /></Td>
                 <Td>
-                  <button className="px-3 py-1 text-xs bg-blue-600 text-white rounded">メール</button>
+                  <div className="flex items-center gap-2">
+                    <button className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">メール</button>
+                    <select
+                      value={r.status}
+                      onChange={(e) => handleStatusChange(r.bookingId, e.target.value as ReservationRow['status'])}
+                      disabled={updating === r.bookingId}
+                      className="text-xs border rounded px-2 py-1 bg-white text-gray-800 disabled:opacity-50"
+                      title="ステータス変更"
+                    >
+                      <option value="pending">pending</option>
+                      <option value="email_sent">email_sent</option>
+                      <option value="responded">responded</option>
+                      <option value="questioning">questioning</option>
+                      <option value="completed">completed</option>
+                    </select>
+                  </div>
                 </Td>
               </tr>
             ))}
