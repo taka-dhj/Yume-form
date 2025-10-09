@@ -42,11 +42,12 @@ export function StatusBadge({
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`px-2 py-1 rounded text-xs font-medium ${colorByStatus[status]} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+        className={`px-2 py-1 rounded text-xs font-medium ${colorByStatus[status]} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'} flex items-center gap-1`}
       >
-        {statusLabel[status]} ▼
+        {disabled && <span className="animate-spin">⏳</span>}
+        {statusLabel[status]} {!disabled && '▼'}
       </button>
 
       {isOpen && (
