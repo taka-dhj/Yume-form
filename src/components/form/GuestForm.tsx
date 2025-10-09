@@ -21,6 +21,7 @@ type FormData = {
   childrenDetails: string;
   arrivalCountryDate: string;
   prevNightPlace: string;
+  hasPhone: boolean;
   phoneNumber: string;
   dinnerRequest: 'yes' | 'no' | '';
   dinnerConsent: boolean;
@@ -52,7 +53,8 @@ const i18n = {
     childrenDetails: 'お子様の年齢と性別を教えてください',
     arrivalCountryDate: '日本への到着日を教えてください',
     prevNightPlace: 'チェックイン前日の宿泊場所を教えてください',
-    phoneNumber: '日本国内で使える電話番号をお持ちですか？',
+    hasPhone: '日本国内で使える携帯電話をお持ちですか？',
+    phoneNumber: '電話番号を入力してください',
     dinnerRequest: '夕食を追加しますか？（1名24,000円）',
     dinnerConsent: '夕食に関する注意事項を読みました',
     dietaryNeeds: '食事に関する特別な配慮が必要ですか？（ベジタリアン/ヴィーガン/ハラル等）',
@@ -83,7 +85,8 @@ const i18n = {
     childrenDetails: 'Please provide their age and gender',
     arrivalCountryDate: 'When will you arrive in Japan?',
     prevNightPlace: 'Where will you stay the night before check-in?',
-    phoneNumber: 'Do you have a phone number usable in Japan?',
+    hasPhone: 'Do you have a cellular phone usable in Japan?',
+    phoneNumber: 'Please enter your phone number',
     dinnerRequest: 'Would you like to add dinner? (24,000 JPY per person)',
     dinnerConsent: 'I have read the dinner terms',
     dietaryNeeds: 'Do you have special dietary requirements? (Vegetarian/Vegan/Halal, etc.)',
@@ -104,6 +107,7 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
     childrenDetails: '',
     arrivalCountryDate: '',
     prevNightPlace: '',
+    hasPhone: false,
     phoneNumber: '',
     dinnerRequest: '',
     dinnerConsent: false,
@@ -250,13 +254,30 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
 
         {/* Phone */}
         <div>
-          <label className="block font-semibold mb-2">{t.phoneNumber}</label>
-          <input
-            type="tel"
-            value={formData.phoneNumber}
-            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            className="w-full border rounded px-3 py-2"
-          />
+          <label className="block font-semibold mb-2">{t.hasPhone}</label>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setFormData({ ...formData, hasPhone: true })}
+              className={`px-4 py-2 rounded ${formData.hasPhone ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+            >
+              {t.yes}
+            </button>
+            <button
+              onClick={() => setFormData({ ...formData, hasPhone: false, phoneNumber: '' })}
+              className={`px-4 py-2 rounded ${!formData.hasPhone ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+            >
+              {t.no}
+            </button>
+          </div>
+          {formData.hasPhone && (
+            <input
+              type="tel"
+              value={formData.phoneNumber}
+              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+              placeholder={t.phoneNumber}
+              className="mt-2 w-full border rounded px-3 py-2"
+            />
+          )}
         </div>
 
         {/* Dinner request (if dinner not included) */}
