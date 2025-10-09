@@ -88,12 +88,16 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
       if (!res.ok) {
         const err = await res.json();
         alert(`Failed to update status: ${err.error || 'Unknown error'}`);
+        setUpdating(null);
       } else {
+        // Wait a moment for spreadsheet to update, then refresh
+        await new Promise(resolve => setTimeout(resolve, 500));
         router.refresh();
+        // Keep updating state until refresh completes
+        setTimeout(() => setUpdating(null), 1000);
       }
     } catch (err) {
       alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
       setUpdating(null);
     }
   };
