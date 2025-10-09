@@ -64,6 +64,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [perPage, setPerPage] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [showUrgentOnly, setShowUrgentOnly] = useState(false);
 
   const today = useMemo(() => new Date(), []);
 
@@ -144,6 +145,22 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
 
   const filtered = useMemo(() => {
     let result = reservations.filter(r => {
+      // Urgent filter
+      if (showUrgentOnly) {
+        const isPending = r.status === 'pending';
+        const isReminderDue = r.status === 'email_sent' && (() => {
+          const checkin = new Date(r.checkinDate);
+          checkin.setHours(0, 0, 0, 0);
+          const todayCopy = new Date(today);
+          todayCopy.setHours(0, 0, 0, 0);
+          const daysUntil = Math.ceil((checkin.getTime() - todayCopy.getTime()) / (1000 * 60 * 60 * 24));
+          return [30, 21, 14, 7].includes(daysUntil);
+        })();
+        const isTodayNotCompleted = isSameDateIso(r.checkinDate, today) && r.status !== 'completed';
+        
+        if (!isPending && !isReminderDue && !isTodayNotCompleted) return false;
+      }
+      
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -173,7 +190,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
     }
 
     return result;
-  }, [reservations, statusFilter, search, checkinFilter, sortField, sortDirection]);
+  }, [reservations, statusFilter, search, checkinFilter, sortField, sortDirection, showUrgentOnly, today]);
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginatedData = useMemo(() => {
@@ -191,14 +208,25 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
     <div className="space-y-6">
       {/* Header / Alerts */}
       <div className="rounded-lg border bg-rose-50 border-rose-200 p-4">
-        <div className="font-semibold text-rose-800 mb-1">緊急対応必要</div>
+        <div className="font-semibold text-rose-800 mb-1">要対応</div>
         <div className="text-sm text-rose-700 flex flex-wrap gap-x-6 gap-y-1">
           <span>未送信: {counts.urgentUnsent}件</span>
           <span>催促期限: {counts.reminderDue}件</span>
           <span>本日チェックイン未完了: {counts.todayNotCompleted}件</span>
         </div>
         <div className="mt-3">
-          <button className="px-3 py-2 bg-rose-600 text-white rounded text-sm">一括処理開始</button>
+          <button 
+            onClick={() => {
+              setShowUrgentOnly(!showUrgentOnly);
+              setStatusFilter('all');
+              setSearch('');
+              setCheckinFilter('');
+              resetPage();
+            }}
+            className={`px-3 py-2 rounded text-sm ${showUrgentOnly ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
+          >
+            {showUrgentOnly ? '全件表示' : '要対応のみ表示'}
+          </button>
         </div>
       </div>
 
@@ -269,6 +297,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
               <ThSortable field="status" currentField={sortField} direction={sortDirection} onSort={handleSort}>
                 ステータス
               </ThSortable>
+              <Th>回答</Th>
               <Th>氏名</Th>
               <Th>Email</Th>
               <ThSortable field="checkinDate" currentField={sortField} direction={sortDirection} onSort={handleSort}>
@@ -294,30 +323,30 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
               }}>
                 <Td className="font-mono text-gray-800 w-32">{r.bookingId}</Td>
                 <Td onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge 
-                      status={r.status} 
-                      onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
-                      disabled={updating === r.bookingId}
-                    />
-                    {(r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') && r.notes && (() => {
-                      try {
-                        const formData = JSON.parse(r.notes);
-                        if (formData.submittedAt) {
-                          return (
-                            <span 
-                              className="text-green-600 cursor-pointer hover:text-green-700" 
-                              title="フォーム回答あり（クリックで詳細表示）"
-                              onClick={(e) => { e.stopPropagation(); setViewingResponse(r); }}
-                            >
-                              📋
-                            </span>
-                          );
-                        }
-                      } catch {}
-                      return null;
-                    })()}
-                  </div>
+                  <StatusBadge 
+                    status={r.status} 
+                    onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
+                    disabled={updating === r.bookingId}
+                  />
+                </Td>
+                <Td className="w-16 text-center" onClick={(e) => e.stopPropagation()}>
+                  {(r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') && r.notes && (() => {
+                    try {
+                      const formData = JSON.parse(r.notes);
+                      if (formData.submittedAt) {
+                        return (
+                          <button 
+                            className="text-green-600 hover:text-green-700 text-lg" 
+                            title="フォーム回答を確認"
+                            onClick={(e) => { e.stopPropagation(); setViewingResponse(r); }}
+                          >
+                            📋
+                          </button>
+                        );
+                      }
+                    } catch {}
+                    return null;
+                  })()}
                 </Td>
                 <Td className="text-gray-800 w-36">{r.guestName}</Td>
                 <Td className="text-gray-800 w-48" title={r.email}>
@@ -330,7 +359,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                   {r.dinnerIncluded === 'Yes' ? 'あり' : r.dinnerIncluded === 'No' ? 'なし' : '不明'}
                 </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex gap-2">
                     {r.status === 'pending' ? (
                       <button 
                         onClick={() => setEmailPreview({ reservation: r, language: 'ja', type: 'initial' })}
