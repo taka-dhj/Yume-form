@@ -16,6 +16,7 @@ export type ReservationRow = {
   emailSentAt?: string;
   status: 'pending' | 'email_sent' | 'responded' | 'questioning' | 'completed';
   notes: string;
+  emailHistory: string;
 };
 
 const rowBg: Record<ReservationRow['status'], string> = {
@@ -58,6 +59,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [viewingResponse, setViewingResponse] = useState<ReservationRow | null>(null);
   const [emailPreview, setEmailPreview] = useState<{ reservation: ReservationRow; language: 'ja' | 'en'; type: 'initial' | 'reception'; editableSubject?: string; editableBody?: string } | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [viewingEmailHistory, setViewingEmailHistory] = useState<ReservationRow | null>(null);
   const [sortField, setSortField] = useState<SortField>('none');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [perPage, setPerPage] = useState<number>(20);
@@ -101,15 +103,14 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
       const res = await fetch('/.netlify/functions/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to, subject, bodyText }),
+        body: JSON.stringify({ to, subject, bodyText, bookingId, emailType }),
       });
       if (!res.ok) {
         const err = await res.json();
         alert(`Failed to send email: ${err.error || 'Unknown error'}`);
       } else {
-        // Update status based on email type
-        const newStatus = emailType === 'initial' ? 'email_sent' : 'completed';
-        await handleStatusChange(bookingId, newStatus);
+        // Refresh to show updated status and email history
+        router.refresh();
         setEmailPreview(null);
         alert('メールを送信しました');
       }
@@ -303,11 +304,30 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                   {r.dinnerIncluded === 'Yes' ? 'あり' : r.dinnerIncluded === 'No' ? 'なし' : '不明'}
                 </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
-                  <StatusBadge 
-                    status={r.status} 
-                    onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
-                    disabled={updating === r.bookingId}
-                  />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge 
+                      status={r.status} 
+                      onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
+                      disabled={updating === r.bookingId}
+                    />
+                    {(r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') && r.notes && (() => {
+                      try {
+                        const formData = JSON.parse(r.notes);
+                        if (formData.submittedAt) {
+                          return (
+                            <span 
+                              className="text-green-600 cursor-pointer hover:text-green-700" 
+                              title="フォーム回答あり（クリックで詳細表示）"
+                              onClick={(e) => { e.stopPropagation(); setViewingResponse(r); }}
+                            >
+                              📋
+                            </span>
+                          );
+                        }
+                      } catch {}
+                      return null;
+                    })()}
+                  </div>
                 </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
                   <div className="flex flex-col gap-1">
@@ -319,14 +339,20 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                         回答依頼
                       </button>
                     ) : (
-                      <span className="px-2 py-1 text-xs bg-green-100 text-green-800 border border-green-300 rounded whitespace-nowrap text-center">
+                      <button
+                        onClick={() => setViewingEmailHistory(r)}
+                        className="px-2 py-1 text-xs bg-green-100 text-green-800 border border-green-300 rounded whitespace-nowrap text-center hover:bg-green-200"
+                      >
                         送信済み
-                      </span>
+                      </button>
                     )}
                     {r.status === 'completed' ? (
-                      <span className="px-2 py-1 text-xs bg-green-100 text-green-800 border border-green-300 rounded whitespace-nowrap text-center">
+                      <button
+                        onClick={() => setViewingEmailHistory(r)}
+                        className="px-2 py-1 text-xs bg-green-100 text-green-800 border border-green-300 rounded whitespace-nowrap text-center hover:bg-green-200"
+                      >
                         送信済み
-                      </span>
+                      </button>
                     ) : (r.status === 'email_sent' || r.status === 'responded' || r.status === 'questioning') && (
                       <button 
                         onClick={() => setEmailPreview({ reservation: r, language: 'ja', type: 'reception' })}
@@ -364,12 +390,28 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                 <div className="text-gray-800 mt-1">{r.guestName}</div>
                 <div className="text-xs text-gray-600 mt-1">{r.email}</div>
               </div>
-              <div onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 <StatusBadge 
                   status={r.status} 
                   onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
                   disabled={updating === r.bookingId}
                 />
+                {(r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') && r.notes && (() => {
+                  try {
+                    const formData = JSON.parse(r.notes);
+                    if (formData.submittedAt) {
+                      return (
+                        <span 
+                          className="text-green-600 text-lg" 
+                          title="フォーム回答あり"
+                        >
+                          📋
+                        </span>
+                      );
+                    }
+                  } catch {}
+                  return null;
+                })()}
               </div>
             </div>
 
@@ -389,14 +431,20 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                   回答依頼
                 </button>
               ) : (
-                <div className="flex-1 px-3 py-2 text-xs bg-green-100 text-green-800 border border-green-300 rounded text-center">
+                <button
+                  onClick={() => setViewingEmailHistory(r)}
+                  className="flex-1 px-3 py-2 text-xs bg-green-100 text-green-800 border border-green-300 rounded text-center hover:bg-green-200"
+                >
                   送信済み
-                </div>
+                </button>
               )}
               {r.status === 'completed' ? (
-                <div className="flex-1 px-3 py-2 text-xs bg-green-100 text-green-800 border border-green-300 rounded text-center">
+                <button
+                  onClick={() => setViewingEmailHistory(r)}
+                  className="flex-1 px-3 py-2 text-xs bg-green-100 text-green-800 border border-green-300 rounded text-center hover:bg-green-200"
+                >
                   送信済み
-                </div>
+                </button>
               ) : (r.status === 'email_sent' || r.status === 'responded' || r.status === 'questioning') && (
                 <button 
                   onClick={() => setEmailPreview({ reservation: r, language: 'ja', type: 'reception' })}
@@ -651,6 +699,76 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
         </div>
       </div>
     )}
+
+    {/* Email History Modal */}
+    {viewingEmailHistory && (() => {
+      type EmailHistoryItem = {
+        type: 'initial' | 'reception';
+        to: string;
+        subject: string;
+        body: string;
+        sentAt: string;
+      };
+      
+      let history: EmailHistoryItem[] = [];
+      try {
+        history = viewingEmailHistory.emailHistory ? JSON.parse(viewingEmailHistory.emailHistory) : [];
+      } catch {
+        history = [];
+      }
+
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setViewingEmailHistory(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <h2 className="text-xl font-semibold">メール送信履歴</h2>
+                <button onClick={() => setViewingEmailHistory(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="text-sm text-gray-600 mb-4">
+                  予約ID: <span className="font-mono font-semibold">{viewingEmailHistory.bookingId}</span> - {viewingEmailHistory.guestName}
+                </div>
+
+                {history.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">メール送信履歴がありません</div>
+                ) : (
+                  <div className="space-y-4">
+                    {history.map((item, index) => (
+                      <div key={index} className="border rounded p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${item.type === 'initial' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                            {item.type === 'initial' ? '回答依頼' : '受付完了'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(item.sentAt).toLocaleString('ja-JP')}
+                          </span>
+                        </div>
+                        <div className="text-sm space-y-2">
+                          <div><span className="font-semibold">宛先:</span> {item.to}</div>
+                          <div><span className="font-semibold">件名:</span> {item.subject}</div>
+                          <div>
+                            <span className="font-semibold">本文:</span>
+                            <pre className="mt-1 whitespace-pre-wrap text-xs bg-white p-2 rounded border">{item.body}</pre>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t pt-4">
+                <button onClick={() => setViewingEmailHistory(null)} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
     </>
   );
 }
