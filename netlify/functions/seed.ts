@@ -40,21 +40,30 @@ export const handler: Handler = async () => {
     }
     const header = rows[0] as string[];
 
-    // Prepare 9 dummy rows
+    // Prepare 13 dummy rows: 5 pending, 3 email_sent, 1 questioning, 4 completed, うち本日チェックイン2件
     const today = new Date();
     const toIsoDate = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0, 10);
 
-    const values = Array.from({ length: 9 }).map((_, i) => {
+    const statuses = [
+      ...Array(5).fill('pending'),
+      ...Array(3).fill('email_sent'),
+      'questioning',
+      ...Array(4).fill('completed'),
+    ];
+
+    const values = statuses.map((status, i) => {
       const num = (i + 1).toString().padStart(3, '0');
-      const checkin = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
-      // バリエーション: 0=pending, 1=email_sent, 2=responded, 3=questioning, 4=completed を循環
-      const variant = i % 5;
+      // 本日チェックイン2件: index 0, 7
+      const daysOffset = (i === 0 || i === 7) ? 0 : i;
+      const checkin = new Date(today.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+
       const flags = {
-        initial_email_sent: variant >= 1,
-        form_responded: variant >= 2,
-        questioning: variant === 3,
-        reception_completed: variant === 4,
+        initial_email_sent: status !== 'pending',
+        form_responded: status === 'responded' || status === 'questioning' || status === 'completed',
+        questioning: status === 'questioning',
+        reception_completed: status === 'completed',
       };
+
       return makeRow(header, {
         booking_id: `TEST-${num}`,
         guest_name: `John Doe ${num}`,
