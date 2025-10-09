@@ -80,9 +80,10 @@ export async function updateReservationStatus(bookingId: string, status: 'pendin
   const sheetRowNum = rowIndex + 2; // header=1, data starts at 2
 
   // Map status to flags
+  // Note: questioning takes priority over responded in status calculation
   const flags = {
     initial_email_sent: status !== 'pending',
-    form_responded: status === 'responded' || status === 'questioning' || status === 'completed',
+    form_responded: status === 'responded' || status === 'completed',
     questioning: status === 'questioning',
     reception_completed: status === 'completed',
   };
