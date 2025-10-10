@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 async function fetchReservations(baseUrl: string): Promise<{ reservations: ReservationRow[] }> {
   const url = `${baseUrl}/.netlify/functions/reservations`;
-  const res = await fetch(url, { next: { revalidate: 10 } });
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) return { reservations: [] };
   const json = await res.json();
   return { reservations: json.reservations ?? [] };
