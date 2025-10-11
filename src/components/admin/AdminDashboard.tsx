@@ -55,7 +55,7 @@ function truncateEmail(email: string, maxLength: number = 25): string {
   return `${local.slice(0, keepStart)}...${local.slice(-keepEnd)}@${domain}`;
 }
 
-function extractResponseSummary(notes: string): string | null {
+function extractResponseSummary(notes: string): { text: string; hasOtherNotes: boolean } | null {
   try {
     const formData = JSON.parse(notes);
     if (!formData.submittedAt) return null;
@@ -87,15 +87,17 @@ function extractResponseSummary(notes: string): string | null {
       parts.push(`到着時刻：${formData.arrivalTime}`);
     }
     
+    const hasOtherNotes = !!(formData.otherNotes && formData.otherNotes.trim());
+    
     // その他（冒頭のみ）
-    if (formData.otherNotes && formData.otherNotes.trim()) {
+    if (hasOtherNotes) {
       const truncated = formData.otherNotes.length > 30 
         ? formData.otherNotes.substring(0, 30) + '...' 
         : formData.otherNotes;
       parts.push(`その他：${truncated}`);
     }
     
-    return parts.join('  ');
+    return { text: parts.join('  '), hasOtherNotes };
   } catch {
     return null;
   }
@@ -671,7 +673,6 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
               <ThSortable field="status" currentField={sortField} direction={sortDirection} onSort={handleSort}>
                 ステータス
               </ThSortable>
-              <Th>回答</Th>
               <Th>氏名</Th>
               <Th>Email</Th>
               <ThSortable field="checkinDate" currentField={sortField} direction={sortDirection} onSort={handleSort}>
@@ -686,7 +687,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-gray-500">該当データがありません</td>
+                <td colSpan={8} className="px-3 py-6 text-center text-gray-500">該当データがありません</td>
               </tr>
             )}
             {paginatedData.map((r: ReservationRow) => (
@@ -698,42 +699,26 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
               }}>
                 <Td className="font-mono text-gray-800 w-32 font-semibold">{r.bookingId}</Td>
                 <Td onClick={(e) => e.stopPropagation()}>
-                  <StatusBadge 
-                    status={r.status} 
-                    onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
-                    disabled={updating === r.bookingId}
-                  />
-                </Td>
-                <Td className="w-20 text-center" onClick={(e) => e.stopPropagation()}>
-                  {(r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') && r.notes && (() => {
-                    try {
-                      const formData = JSON.parse(r.notes);
-                      if (formData.submittedAt) {
-                        return (
-                          <div className="flex flex-col items-center gap-0.5">
-                            <button 
-                              className="text-green-600 hover:text-green-700 text-lg leading-none" 
-                              title="フォーム回答を確認"
-                              onClick={(e) => { e.stopPropagation(); setViewingResponse(r); }}
-                            >
-                              📋
-                            </button>
-                            {formData.isRevision && (
-                              <span className="text-orange-600 text-[9px] font-bold" title={`修正日時: ${formData.revisedAt ? new Date(formData.revisedAt).toLocaleString('ja-JP') : ''}`}>
-                                修正
-                              </span>
-                            )}
-                            {formData.otherNotes && formData.otherNotes.trim() && (
-                              <span className="text-red-600 text-[9px] font-bold" title="その他要望あり - 要確認">
-                                要確認
-                              </span>
-                            )}
-                          </div>
-                        );
-                      }
-                    } catch {}
-                    return null;
-                  })()}
+                  <div className="flex items-center gap-2">
+                    <StatusBadge 
+                      status={r.status} 
+                      onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
+                      disabled={updating === r.bookingId}
+                    />
+                    {(() => {
+                      try {
+                        const formData = JSON.parse(r.notes);
+                        if (formData.submittedAt && formData.isRevision) {
+                          return (
+                            <span className="text-orange-600 text-[9px] font-bold" title={`修正日時: ${formData.revisedAt ? new Date(formData.revisedAt).toLocaleString('ja-JP') : ''}`}>
+                              📝修正
+                            </span>
+                          );
+                        }
+                      } catch {}
+                      return null;
+                    })()}
+                  </div>
                 </Td>
                 <Td className="text-gray-800 w-36">{r.guestName}</Td>
                 <Td className="text-gray-800 w-48" title={r.email}>
@@ -780,13 +765,40 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                   </div>
                 </Td>
               </tr>
-              {extractResponseSummary(r.notes) && (
-                <tr key={`${r.bookingId}-summary`} className="border-t-0">
-                  <td colSpan={10} className="px-3 py-1 text-[10px] text-gray-600 bg-gray-50">
-                    {extractResponseSummary(r.notes)}
-                  </td>
-                </tr>
-              )}
+              <tr 
+                key={`${r.bookingId}-summary`} 
+                className="border-t-0 cursor-pointer hover:bg-blue-50"
+                onClick={() => {
+                  const summary = extractResponseSummary(r.notes);
+                  if (summary) {
+                    setViewingResponse(r);
+                  }
+                }}
+              >
+                <td colSpan={8} className="px-3 py-1 text-[10px] bg-gray-50">
+                  {(() => {
+                    const summary = extractResponseSummary(r.notes);
+                    if (!summary) {
+                      return <span className="text-gray-400 italic">回答なし</span>;
+                    }
+                    
+                    // Split by "その他："
+                    const parts = summary.text.split('その他：');
+                    if (parts.length === 1) {
+                      return <span className="text-gray-600">{summary.text}</span>;
+                    }
+                    
+                    return (
+                      <span className="text-gray-600">
+                        {parts[0]}
+                        <span className={summary.hasOtherNotes ? 'text-red-600 font-semibold' : 'text-gray-600'}>
+                          その他：{parts[1]}
+                        </span>
+                      </span>
+                    );
+                  })()}
+                </td>
+              </tr>
               </>
             ))}
           </tbody>
@@ -812,11 +824,6 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="font-mono text-sm font-semibold text-gray-800">{r.bookingId}</div>
-                {extractResponseSummary(r.notes) && (
-                  <div className="text-[10px] text-gray-600 mt-1 leading-tight">
-                    {extractResponseSummary(r.notes)}
-                  </div>
-                )}
                 <div className="text-gray-800 mt-1">{r.guestName}</div>
                 <div className="text-xs text-gray-600 mt-1">{r.email}</div>
               </div>
@@ -826,30 +833,53 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                   onChange={(newStatus) => handleStatusChange(r.bookingId, newStatus)}
                   disabled={updating === r.bookingId}
                 />
-                {(r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') && r.notes && (() => {
+                {(() => {
                   try {
                     const formData = JSON.parse(r.notes);
-                    if (formData.submittedAt) {
+                    if (formData.submittedAt && formData.isRevision) {
                       return (
-                        <div className="flex flex-col items-center gap-1">
-                          <span 
-                            className="text-green-600 text-lg" 
-                            title="フォーム回答あり"
-                          >
-                            📋
-                          </span>
-                          {formData.otherNotes && formData.otherNotes.trim() && (
-                            <span className="text-red-600 text-[9px] font-bold" title="その他要望あり - 要確認">
-                              要確認
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-orange-600 text-[9px] font-bold">
+                          📝修正
+                        </span>
                       );
                     }
                   } catch {}
                   return null;
                 })()}
               </div>
+            </div>
+
+            {/* Response summary - always show */}
+            <div 
+              className="text-[10px] leading-tight p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-blue-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                const summary = extractResponseSummary(r.notes);
+                if (summary) {
+                  setViewingResponse(r);
+                }
+              }}
+            >
+              {(() => {
+                const summary = extractResponseSummary(r.notes);
+                if (!summary) {
+                  return <span className="text-gray-400 italic">回答なし</span>;
+                }
+                
+                const parts = summary.text.split('その他：');
+                if (parts.length === 1) {
+                  return <span className="text-gray-600">{summary.text}</span>;
+                }
+                
+                return (
+                  <span className="text-gray-600">
+                    {parts[0]}
+                    <span className={summary.hasOtherNotes ? 'text-red-600 font-semibold' : 'text-gray-600'}>
+                      その他：{parts[1]}
+                    </span>
+                  </span>
+                );
+              })()}
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
