@@ -22,3 +22,162 @@ body {
 }
 
 /* Form版YumeChanBot デザインシステム */
+
+/* Page container with padding */
+.page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.page-content {
+  padding: 2rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .page-content {
+    padding: 3rem 2rem;
+  }
+}
+
+/* Form card styles */
+.form-card {
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+}
+
+.form-card-header {
+  background: #7c3aed;
+  margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+  padding: 1rem 1.5rem;
+  color: white;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+/* Important notice styles */
+.important-notice {
+  background: #fef3c7;
+  border: 2px solid #f59e0b;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.important-notice-title {
+  color: #92400e;
+  font-weight: 700;
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.important-notice-title::before {
+  content: "⚠️";
+  font-size: 1.25rem;
+}
+
+.important-notice-content {
+  color: #78350f;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Info table styles */
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.info-table th,
+.info-table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.info-table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  width: 30%;
+  color: #374151;
+}
+
+.info-table td {
+  background: white;
+  color: #1f2937;
+}
+
+/* Button styles */
+.form-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+}
+
+.form-button-primary {
+  color: white;
+  background: #7c3aed;
+}
+
+.form-button-primary:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.form-button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-button-secondary {
+  color: #374151;
+  background: white;
+  border-color: #d1d5db;
+}
+
+.form-button-secondary:hover {
+  background: #f9fafb;
+}
+
+/* Status badge styles */
+.status-pending {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.status-email_sent {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.status-responded {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.status-questioning {
+  background: #fed7aa;
+  color: #9a3412;
+  border-color: #fdba74;
+}
+
+.status-completed {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}

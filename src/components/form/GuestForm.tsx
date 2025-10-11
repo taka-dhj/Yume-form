@@ -67,8 +67,8 @@ const i18n = {
     arrivalTimeNotice: '【到着時刻に関する重要なお願い】\n\n当館では、皆様に最高のお食事体験をお届けするため、お食事は全て当日調理いたしております。\n\n夕食付きプランのお客様へ：\n• ご夕食は17時を目安にご準備させていただきます。\n• 17時以降にご到着された場合、衛生法により作り置きができないため、ご夕食の提供ができかねます。\n• 食材の仕入れや仕込みは既に完了しておりますため、遅延による返金は承りかねます。\n• お客様の安全とお食事の品質を守るための規定でございますので、何卒ご理解賜りますようお願い申し上げます。\n• できる限り17時までのご到着をお願いいたします。',
     arrivalTimeConsent: '到着時刻に関する注意事項を読み、同意します',
     needsPickup: 'JR河口湖駅からの送迎が必要ですか？',
-    pickupNotice: '【送迎サービスについて】\n\n当旅館では、JR河口湖駅からホテルまでの無料送迎を12:00〜17:00の間で行っております。\n\n必要な場合は、JR河口湖駅到着後、必ず+81-555-72-6111へお電話いただきまして送迎の手配をお願いいたします。\n\n※送迎は事前予約制となっております。\n※到着時刻が17時を過ぎる場合は、タクシーをご利用ください。',
-    pickupConsent: '送迎に関する注意事項を読み、理解しました',
+    pickupNotice: '【送迎サービスについて】\n\n当館では、JR河口湖駅から12:00～17:00の間に無料送迎を行っております。\n\nJR河口湖駅に到着されましたら、必ず+81-555-72-6111までお電話ください。すぐにお迎えに上がります。\n\n温泉寺夢殿で快適にお過ごしいただけるよう、心よりお待ち申し上げております。',
+    pickupConsent: '上記の送迎サービスについて読み、理解しました',
     otherNotes: 'その他ご要望',
     reviewTitle: '入力内容の確認',
     reviewMessage: '以下の内容でよろしいですか？',
@@ -108,7 +108,7 @@ const i18n = {
     arrivalTimeNotice: '【Important Notice Regarding Arrival Time】\n\nAt our inn, we prepare all meals fresh on the day to provide you with the finest dining experience.\n\nFor guests with dinner included:\n• We prepare dinner with an arrival time of 5:00 PM in mind.\n• If you arrive after 5:00 PM, we regret that we cannot serve dinner due to hygiene regulations that prohibit keeping prepared food.\n• As ingredients have already been procured and prepared, we are unable to offer refunds for late arrivals.\n• This policy exists to ensure your safety and maintain the quality of our cuisine. We appreciate your understanding.\n• We kindly request that you arrive by 5:00 PM whenever possible.',
     arrivalTimeConsent: 'I have read and agree to the arrival time notice',
     needsPickup: 'Do you need pickup service from JR Kawaguchiko Station?',
-    pickupNotice: '【About Pickup Service】\n\nWe provide free pickup service from JR Kawaguchiko Station to our hotel between 12:00 PM and 5:00 PM.\n\nIf you need pickup service, please call +81-555-72-6111 immediately after arriving at JR Kawaguchiko Station to arrange pickup.\n\n※Pickup service requires advance reservation.\n※If you arrive after 5:00 PM, please use a taxi.',
+    pickupNotice: '【About Pickup Service】\n\nWe offer complimentary pickup service from JR Kawaguchiko Station between 12:00 PM and 5:00 PM.\n\nWhen you arrive at JR Kawaguchiko Station, please call +81-555-72-6111 immediately. We will come to pick you up right away.\n\nWe look forward to welcoming you to Onsenji Yumedono and ensuring your comfortable stay.',
     pickupConsent: 'I have read and understood the pickup service information',
     otherNotes: 'Other requests',
     reviewTitle: 'Review Your Responses',
@@ -315,23 +315,48 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
 
   if (step === 'confirm') {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-semibold mb-4">{t.reservationDetails}</h1>
-        <div className="space-y-2 text-gray-700 mb-6">
-          <p><strong>{t.bookingId}:</strong> {reservation.bookingId}</p>
-          <p><strong>{t.guestName}:</strong> {reservation.guestName}</p>
-          <p><strong>{t.email}:</strong> {reservation.email}</p>
-          <p><strong>{t.checkinDate}:</strong> {reservation.checkinDate}</p>
-          <p><strong>{t.nights}:</strong> {reservation.nights}</p>
-          <p><strong>{t.otaName}:</strong> {reservation.otaName}</p>
-          <p><strong>{t.dinnerIncluded}:</strong> {reservation.dinnerIncluded}</p>
+      <div className="form-card">
+        <div className="form-card-header">
+          {t.reservationDetails}
         </div>
-        <p className="text-lg mb-4">{t.confirmReservation}</p>
+        <table className="info-table">
+          <tbody>
+            <tr>
+              <th>{t.bookingId}</th>
+              <td>{reservation.bookingId}</td>
+            </tr>
+            <tr>
+              <th>{t.guestName}</th>
+              <td>{reservation.guestName}</td>
+            </tr>
+            <tr>
+              <th>{t.email}</th>
+              <td>{reservation.email}</td>
+            </tr>
+            <tr>
+              <th>{t.checkinDate}</th>
+              <td>{reservation.checkinDate}</td>
+            </tr>
+            <tr>
+              <th>{t.nights}</th>
+              <td>{reservation.nights}{formData.language === 'ja' ? '泊' : ' nights'}</td>
+            </tr>
+            <tr>
+              <th>{t.otaName}</th>
+              <td>{reservation.otaName}</td>
+            </tr>
+            <tr>
+              <th>{t.dinnerIncluded}</th>
+              <td>{reservation.dinnerIncluded}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="text-lg mb-4 mt-6 font-semibold text-gray-800">{t.confirmReservation}</p>
         <div className="flex gap-3">
-          <button onClick={() => handleConfirm(true)} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+          <button onClick={() => handleConfirm(true)} className="form-button form-button-primary">
             {t.yes}
           </button>
-          <button onClick={() => handleConfirm(false)} className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+          <button onClick={() => handleConfirm(false)} className="form-button form-button-secondary">
             {t.no}
           </button>
         </div>
@@ -449,16 +474,21 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
 
         {/* Dinner notice and consent (if dinner included or requested) */}
         {(reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') && (
-          <div className="border border-orange-300 bg-orange-50 p-4 rounded">
-            <pre className="whitespace-pre-wrap text-sm text-gray-800 mb-3 font-sans">{t.dinnerNotice}</pre>
-            <label className="flex items-start gap-2 cursor-pointer">
+          <div className="important-notice">
+            <div className="important-notice-title">
+              {formData.language === 'ja' ? '夕食に関する重要なお知らせ' : 'Important Information About Dinner'}
+            </div>
+            <div className="important-notice-content">
+              <pre className="whitespace-pre-wrap font-sans">{t.dinnerNotice}</pre>
+            </div>
+            <label className="flex items-start gap-2 cursor-pointer mt-4">
               <input
                 type="checkbox"
                 checked={formData.dinnerConsent}
                 onChange={(e) => setFormData({ ...formData, dinnerConsent: e.target.checked })}
                 className="mt-1"
               />
-              <span className="text-sm font-semibold">{t.dinnerConsent}</span>
+              <span className="text-sm font-bold text-gray-800">{t.dinnerConsent}</span>
             </label>
           </div>
         )}
@@ -495,16 +525,21 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
 
         {/* Arrival time notice and consent (if dinner included or requested) */}
         {(reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') && (
-          <div className="border border-blue-300 bg-blue-50 p-4 rounded">
-            <pre className="whitespace-pre-wrap text-sm text-gray-800 mb-3 font-sans">{t.arrivalTimeNotice}</pre>
-            <label className="flex items-start gap-2 cursor-pointer">
+          <div className="important-notice">
+            <div className="important-notice-title">
+              {formData.language === 'ja' ? '到着時刻に関する重要なお願い' : 'Important Notice Regarding Arrival Time'}
+            </div>
+            <div className="important-notice-content">
+              <pre className="whitespace-pre-wrap font-sans">{t.arrivalTimeNotice}</pre>
+            </div>
+            <label className="flex items-start gap-2 cursor-pointer mt-4">
               <input
                 type="checkbox"
                 checked={formData.arrivalTimeConsent}
                 onChange={(e) => setFormData({ ...formData, arrivalTimeConsent: e.target.checked })}
                 className="mt-1"
               />
-              <span className="text-sm font-semibold">{t.arrivalTimeConsent}</span>
+              <span className="text-sm font-bold text-gray-800">{t.arrivalTimeConsent}</span>
             </label>
           </div>
         )}
@@ -539,16 +574,21 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
           </div>
           
           {formData.needsPickup && (
-            <div className="border border-blue-300 bg-blue-50 p-4 rounded">
-              <pre className="whitespace-pre-wrap text-sm text-gray-800 mb-3 font-sans">{t.pickupNotice}</pre>
-              <label className="flex items-start gap-2 cursor-pointer">
+            <div className="important-notice">
+              <div className="important-notice-title">
+                {formData.language === 'ja' ? '送迎サービスについて' : 'About Pickup Service'}
+              </div>
+              <div className="important-notice-content">
+                <pre className="whitespace-pre-wrap font-sans">{t.pickupNotice}</pre>
+              </div>
+              <label className="flex items-start gap-2 cursor-pointer mt-4">
                 <input
                   type="checkbox"
                   checked={formData.pickupConsent}
                   onChange={(e) => setFormData({ ...formData, pickupConsent: e.target.checked })}
                   className="mt-1"
                 />
-                <span className="text-sm font-semibold">{t.pickupConsent}</span>
+                <span className="text-sm font-bold text-gray-800">{t.pickupConsent}</span>
               </label>
             </div>
           )}
@@ -584,45 +624,79 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
 
   if (step === 'review') {
     return (
-      <div className="bg-white rounded-lg shadow p-6 space-y-6">
-        <h1 className="text-2xl font-semibold mb-4">{t.reviewTitle}</h1>
+      <div className="form-card">
+        <div className="form-card-header">
+          {t.reviewTitle}
+        </div>
         <p className="text-gray-600 mb-4">{t.reviewMessage}</p>
 
-        <div className="space-y-4 border-t pt-4">
-          {formData.hasChildren && (
-            <ReviewItem label={t.hasChildren} value={`${t.yes} - ${formData.childrenDetails}`} />
-          )}
-          {formData.arrivalCountryDate && (
-            <ReviewItem label={t.arrivalCountryDate} value={formData.arrivalCountryDate} />
-          )}
-          {formData.prevNightPlace && (
-            <ReviewItem label={t.prevNightPlace} value={formData.prevNightPlace} />
-          )}
-          {formData.hasPhone && (
-            <ReviewItem label={t.phoneNumber} value={formData.phoneNumber} />
-          )}
-          {reservation.dinnerIncluded !== 'Yes' && formData.dinnerRequest && (
-            <ReviewItem label={t.dinnerRequest} value={formData.dinnerRequest === 'yes' ? t.yes : t.no} />
-          )}
-          {(reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') && formData.dietaryNeeds && (
-            <ReviewItem label={t.dietaryNeeds} value={`${t.yes} - ${formData.dietaryDetails}`} />
-          )}
-          {formData.arrivalTime && (
-            <ReviewItem label={t.arrivalTime} value={formData.arrivalTime} />
-          )}
-          {formData.otherNotes && (
-            <ReviewItem label={t.otherNotes} value={formData.otherNotes} />
-          )}
-        </div>
+        <table className="info-table">
+          <tbody>
+            {formData.hasChildren && (
+              <tr>
+                <th>{t.hasChildren}</th>
+                <td>{t.yes} - {formData.childrenDetails}</td>
+              </tr>
+            )}
+            {formData.arrivalCountryDate && (
+              <tr>
+                <th>{t.arrivalCountryDate}</th>
+                <td>{formData.arrivalCountryDate}</td>
+              </tr>
+            )}
+            {formData.prevNightPlace && (
+              <tr>
+                <th>{t.prevNightPlace}</th>
+                <td>{formData.prevNightPlace}</td>
+              </tr>
+            )}
+            {formData.hasPhone && (
+              <tr>
+                <th>{t.phoneNumber}</th>
+                <td>{formData.phoneNumber}</td>
+              </tr>
+            )}
+            {reservation.dinnerIncluded !== 'Yes' && formData.dinnerRequest && (
+              <tr>
+                <th>{t.dinnerRequest}</th>
+                <td>{formData.dinnerRequest === 'yes' ? t.yes : t.no}</td>
+              </tr>
+            )}
+            {(reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') && formData.dietaryNeeds && (
+              <tr>
+                <th>{t.dietaryNeeds}</th>
+                <td>{t.yes} - {formData.dietaryDetails}</td>
+              </tr>
+            )}
+            {formData.arrivalTime && (
+              <tr>
+                <th>{t.arrivalTime}</th>
+                <td>{formData.arrivalTime}</td>
+              </tr>
+            )}
+            {formData.needsPickup !== undefined && (
+              <tr>
+                <th>{t.needsPickup}</th>
+                <td>{formData.needsPickup ? t.yes : t.no}</td>
+              </tr>
+            )}
+            {formData.otherNotes && (
+              <tr>
+                <th>{t.otherNotes}</th>
+                <td>{formData.otherNotes}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
 
-        <div className="flex gap-3 pt-4 border-t">
-          <button onClick={() => setStep('questions')} className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+        <div className="flex gap-3 pt-4 mt-6">
+          <button onClick={() => setStep('questions')} className="form-button form-button-secondary">
             {t.edit}
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+            className="form-button form-button-primary"
           >
             {submitting ? t.submitting : t.submit}
           </button>
@@ -675,13 +749,3 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
     </>
   );
 }
-
-function ReviewItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-      <div className="font-semibold text-gray-700">{label}</div>
-      <div className="sm:col-span-2 text-gray-800">{value}</div>
-    </div>
-  );
-}
-
