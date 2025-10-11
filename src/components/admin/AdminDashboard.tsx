@@ -494,7 +494,18 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
         })();
         const isTodayNotCompleted = isSameDateIso(r.checkinDate, today) && r.status !== 'completed';
         
-        if (!isPending && !isReminderDue && !isTodayNotCompleted) return false;
+        // Check if this is a revised response
+        const isRevised = (() => {
+          if (dismissedRevisions.has(r.bookingId)) return false;
+          try {
+            const formData = JSON.parse(r.notes);
+            return formData.isRevision && formData.revisedAt;
+          } catch {
+            return false;
+          }
+        })();
+        
+        if (!isPending && !isReminderDue && !isTodayNotCompleted && !isRevised) return false;
       }
       
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
@@ -526,7 +537,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
     }
 
     return result;
-  }, [reservations, statusFilter, search, checkinFilter, sortField, sortDirection, showUrgentOnly, today]);
+  }, [reservations, statusFilter, search, checkinFilter, sortField, sortDirection, showUrgentOnly, today, dismissedRevisions]);
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginatedData = useMemo(() => {
