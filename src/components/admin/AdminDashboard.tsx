@@ -47,6 +47,52 @@ function truncateEmail(email: string, maxLength: number = 25): string {
   return `${local.slice(0, keepStart)}...${local.slice(-keepEnd)}@${domain}`;
 }
 
+function extractResponseSummary(notes: string): string | null {
+  try {
+    const formData = JSON.parse(notes);
+    if (!formData.submittedAt) return null;
+    
+    const parts: string[] = [];
+    
+    // 言語
+    if (formData.language) {
+      parts.push(`言語：${formData.language === 'ja' ? '日本語' : 'English'}`);
+    }
+    
+    // 日本到着日
+    if (formData.arrivalCountryDate) {
+      parts.push(`日本到着日：${formData.arrivalCountryDate}`);
+    }
+    
+    // 前泊場所
+    if (formData.prevNightPlace) {
+      parts.push(`前泊場所：${formData.prevNightPlace}`);
+    }
+    
+    // 夕食
+    if (formData.dinnerRequest) {
+      parts.push(`夕食：${formData.dinnerRequest === 'yes' ? 'はい' : 'いいえ'}`);
+    }
+    
+    // 到着時刻
+    if (formData.arrivalTime) {
+      parts.push(`到着時刻：${formData.arrivalTime}`);
+    }
+    
+    // その他（冒頭のみ）
+    if (formData.otherNotes && formData.otherNotes.trim()) {
+      const truncated = formData.otherNotes.length > 30 
+        ? formData.otherNotes.substring(0, 30) + '...' 
+        : formData.otherNotes;
+      parts.push(`その他：${truncated}`);
+    }
+    
+    return parts.join('  ');
+  } catch {
+    return null;
+  }
+}
+
 type SortField = 'bookingId' | 'checkinDate' | 'status' | 'none';
 type SortDirection = 'asc' | 'desc';
 
@@ -553,7 +599,16 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                   setViewingResponse(r);
                 }
               }}>
-                <Td className="font-mono text-gray-800 w-32">{r.bookingId}</Td>
+                <Td className="font-mono text-gray-800 w-32">
+                  <div className="flex flex-col gap-1">
+                    <div className="font-semibold">{r.bookingId}</div>
+                    {extractResponseSummary(r.notes) && (
+                      <div className="text-[10px] text-gray-600 leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                        {extractResponseSummary(r.notes)}
+                      </div>
+                    )}
+                  </div>
+                </Td>
                 <Td onClick={(e) => e.stopPropagation()}>
                   <StatusBadge 
                     status={r.status} 
@@ -661,6 +716,11 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="font-mono text-sm font-semibold text-gray-800">{r.bookingId}</div>
+                {extractResponseSummary(r.notes) && (
+                  <div className="text-[10px] text-gray-600 mt-1 leading-tight">
+                    {extractResponseSummary(r.notes)}
+                  </div>
+                )}
                 <div className="text-gray-800 mt-1">{r.guestName}</div>
                 <div className="text-xs text-gray-600 mt-1">{r.email}</div>
               </div>
