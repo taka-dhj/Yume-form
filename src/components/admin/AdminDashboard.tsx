@@ -27,6 +27,14 @@ const rowBg: Record<ReservationRow['status'], string> = {
   completed: '',
 };
 
+const statusLabels: Record<ReservationRow['status'], string> = {
+  pending: '未送信',
+  email_sent: '回答待ち',
+  responded: '回答済み',
+  questioning: '質問中',
+  completed: '受付完了',
+};
+
 function isSameDateIso(iso: string, target: Date): boolean {
   if (!iso) return false;
   const d = new Date(iso);
@@ -475,26 +483,49 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
     <div className="space-y-6">
       {/* Header / Alerts */}
       <div className="form-card">
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
-          <div className="font-semibold text-rose-800 mb-1">要対応</div>
-          <div className="text-sm text-rose-700 flex flex-wrap gap-x-6 gap-y-1">
-            <span>未送信: {counts.urgentUnsent}件</span>
-            <span>催促期限: {counts.reminderDue}件</span>
-            <span>本日チェックイン未完了: {counts.todayNotCompleted}件</span>
-          </div>
-          <div className="mt-3">
-            <button
-              onClick={() => {
-                setShowUrgentOnly(!showUrgentOnly);
-                setStatusFilter('all');
-                setSearch('');
-                setCheckinFilter('');
-                resetPage();
-              }}
-              className={`px-3 py-2 rounded text-sm ${showUrgentOnly ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
-            >
-              {showUrgentOnly ? '全件表示' : '要対応のみ表示'}
-            </button>
+        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 flex items-start gap-4">
+          <button
+            onClick={() => {
+              setShowUrgentOnly(!showUrgentOnly);
+              setStatusFilter('all');
+              setSearch('');
+              setCheckinFilter('');
+              resetPage();
+            }}
+            className={`px-4 py-2 rounded text-sm whitespace-nowrap ${showUrgentOnly ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
+          >
+            {showUrgentOnly ? '全件表示' : '要対応のみ表示'}
+          </button>
+          <div className="flex-1">
+            <div className="font-semibold text-rose-800 mb-1">要対応</div>
+            <div className="text-sm text-rose-700 flex flex-wrap gap-x-6 gap-y-1">
+              <button 
+                onClick={() => { setStatusFilter('pending'); resetPage(); }}
+                className="hover:underline cursor-pointer"
+              >
+                未送信: {counts.urgentUnsent}件
+              </button>
+              <button 
+                onClick={() => { 
+                  setStatusFilter('email_sent'); 
+                  // TODO: リマインダー期限でフィルター
+                  resetPage(); 
+                }}
+                className="hover:underline cursor-pointer"
+              >
+                催促期限: {counts.reminderDue}件
+              </button>
+              <button 
+                onClick={() => { 
+                  setStatusFilter('all');
+                  setCheckinFilter(new Date().toISOString().split('T')[0]);
+                  resetPage(); 
+                }}
+                className="hover:underline cursor-pointer"
+              >
+                本日チェックイン未完了: {counts.todayNotCompleted}件
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -517,7 +548,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                 onClick={() => { setStatusFilter(s); resetPage(); }}
                 className={`px-3 py-1.5 rounded border text-sm transition-colors ${statusFilter===s? 'bg-purple-600 text-white border-purple-600':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
               >
-                {s === 'all' ? 'すべて' : s}
+                {s === 'all' ? 'すべて' : statusLabels[s]}
               </button>
             ))}
           </div>
