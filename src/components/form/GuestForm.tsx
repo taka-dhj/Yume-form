@@ -281,30 +281,95 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
 
   if (step === 'revision') {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-semibold mb-4">
+      <div className="form-card">
+        <div className="form-card-header">
           {formData.language === 'ja' ? '回答済みです' : 'Already Responded'}
-        </h1>
+        </div>
         <p className="text-gray-600 mb-4">
           {formData.language === 'ja' 
             ? `${existingResponse?.submittedAt ? new Date(existingResponse.submittedAt).toLocaleString('ja-JP') : ''}に回答を送信済みです。` 
             : `You have already submitted your response${existingResponse?.submittedAt ? ` on ${new Date(existingResponse.submittedAt).toLocaleString('en-US')}` : ''}.`}
         </p>
-        <p className="text-gray-700 mb-6">
+
+        <div className="my-6">
+          <h2 className="text-lg font-semibold mb-3 text-gray-800">
+            {formData.language === 'ja' ? '送信済みの内容' : 'Your Previous Response'}
+          </h2>
+          <table className="info-table">
+            <tbody>
+              {existingResponse?.hasChildren && (
+                <tr>
+                  <th>{t.hasChildren}</th>
+                  <td>{t.yes} - {existingResponse.childrenDetails}</td>
+                </tr>
+              )}
+              {existingResponse?.arrivalCountryDate && (
+                <tr>
+                  <th>{t.arrivalCountryDate}</th>
+                  <td>{existingResponse.arrivalCountryDate}</td>
+                </tr>
+              )}
+              {existingResponse?.prevNightPlace && (
+                <tr>
+                  <th>{t.prevNightPlace}</th>
+                  <td>{existingResponse.prevNightPlace}</td>
+                </tr>
+              )}
+              {existingResponse?.hasPhone && (
+                <tr>
+                  <th>{t.phoneNumber}</th>
+                  <td>{existingResponse.phoneNumber}</td>
+                </tr>
+              )}
+              {existingResponse?.dinnerRequest && (
+                <tr>
+                  <th>{t.dinnerRequest}</th>
+                  <td>{existingResponse.dinnerRequest === 'yes' ? t.yes : t.no}</td>
+                </tr>
+              )}
+              {existingResponse?.dietaryNeeds && (
+                <tr>
+                  <th>{t.dietaryNeeds}</th>
+                  <td>{t.yes} - {existingResponse.dietaryDetails}</td>
+                </tr>
+              )}
+              {existingResponse?.arrivalTime && (
+                <tr>
+                  <th>{t.arrivalTime}</th>
+                  <td>{existingResponse.arrivalTime}</td>
+                </tr>
+              )}
+              {existingResponse?.needsPickup !== undefined && (
+                <tr>
+                  <th>{t.needsPickup}</th>
+                  <td>{existingResponse.needsPickup ? t.yes : t.no}</td>
+                </tr>
+              )}
+              {existingResponse?.otherNotes && (
+                <tr>
+                  <th>{t.otherNotes}</th>
+                  <td>{existingResponse.otherNotes}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-gray-700 mb-6 font-semibold">
           {formData.language === 'ja' 
-            ? '内容を変更しますか？変更する場合、前回の回答内容が事前入力されています。' 
-            : 'Would you like to modify your response? If yes, your previous answers are pre-filled.'}
+            ? '内容を変更しますか？' 
+            : 'Would you like to modify your response?'}
         </p>
         <div className="flex gap-3">
           <button 
             onClick={() => { setIsRevision(true); setStep('questions'); }} 
-            className="px-6 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+            className="form-button form-button-primary"
           >
             {formData.language === 'ja' ? '変更する' : 'Modify'}
           </button>
           <button 
             onClick={() => setStep('complete')} 
-            className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+            className="form-button form-button-secondary"
           >
             {formData.language === 'ja' ? 'そのまま' : 'Keep as is'}
           </button>
@@ -611,7 +676,43 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
               {t.back}
             </button>
             <button
-              onClick={() => setStep('review')}
+              onClick={() => {
+                // Validation before moving to review
+                const errors: string[] = [];
+                
+                // Validate dinner consent if dinner is included or requested
+                if (reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') {
+                  if (!formData.dinnerConsent) {
+                    errors.push(formData.language === 'ja' 
+                      ? '夕食に関する注意事項に同意してください' 
+                      : 'Please agree to the dinner terms');
+                  }
+                  if (!formData.arrivalTimeConsent) {
+                    errors.push(formData.language === 'ja' 
+                      ? '到着時刻に関する注意事項に同意してください' 
+                      : 'Please agree to the arrival time notice');
+                  }
+                }
+
+                // Validate pickup consent if pickup is needed
+                if (formData.needsPickup && !formData.pickupConsent) {
+                  errors.push(formData.language === 'ja' 
+                    ? '送迎に関する注意事項に同意してください' 
+                    : 'Please agree to the pickup service terms');
+                }
+
+                if (errors.length > 0) {
+                  setModalMessage({
+                    type: 'error',
+                    title: formData.language === 'ja' ? '入力内容を確認してください' : 'Please check your input',
+                    message: formData.language === 'ja' ? '以下の項目を確認してください：' : 'Please review the following:',
+                    details: errors,
+                  });
+                  return;
+                }
+
+                setStep('review');
+              }}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {t.next}

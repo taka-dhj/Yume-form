@@ -119,6 +119,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [perPage, setPerPage] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showUrgentOnly, setShowUrgentOnly] = useState(false);
+  const [dismissedRevisions, setDismissedRevisions] = useState<Set<string>>(new Set());
 
   // Email Preview Modal content
   const emailPreviewModal = useMemo(() => {
@@ -340,6 +341,19 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
 
   const today = useMemo(() => new Date(), []);
 
+  // Detect revisions
+  const revisedReservations = useMemo(() => {
+    return reservations.filter(r => {
+      if (dismissedRevisions.has(r.bookingId)) return false;
+      try {
+        const formData = JSON.parse(r.notes);
+        return formData.isRevision && formData.revisedAt;
+      } catch {
+        return false;
+      }
+    });
+  }, [reservations, dismissedRevisions]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -483,7 +497,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
     <div className="space-y-6">
       {/* Header / Alerts */}
       <div className="form-card mx-8">
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 flex items-start gap-4">
+        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 flex items-stretch gap-4">
           <button
             onClick={() => {
               setShowUrgentOnly(!showUrgentOnly);
@@ -492,7 +506,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
               setCheckinFilter('');
               resetPage();
             }}
-            className={`px-4 py-2 rounded text-sm whitespace-nowrap ${showUrgentOnly ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
+            className={`px-4 rounded text-sm whitespace-nowrap self-stretch ${showUrgentOnly ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
           >
             {showUrgentOnly ? '全件表示' : '要対応のみ表示'}
           </button>
@@ -525,10 +539,65 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
               >
                 本日チェックイン未完了: {counts.todayNotCompleted}件
               </button>
+              {revisedReservations.length > 0 && (
+                <button 
+                  onClick={() => { 
+                    // Show the first revised reservation
+                    if (revisedReservations[0]) {
+                      setViewingResponse(revisedReservations[0]);
+                    }
+                  }}
+                  className="hover:underline cursor-pointer font-bold text-red-700 animate-pulse"
+                >
+                  🔔 修正内容確認: {revisedReservations.length}件
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Revision Alert */}
+      {revisedReservations.length > 0 && (
+        <div className="form-card mx-8 bg-orange-50 border-orange-300">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="font-bold text-orange-900 mb-2">📝 回答修正がありました</h3>
+              <div className="text-sm text-orange-800">
+                {revisedReservations.map(r => {
+                  try {
+                    const formData = JSON.parse(r.notes);
+                    const revisedAt = formData.revisedAt ? new Date(formData.revisedAt).toLocaleString('ja-JP') : '';
+                    return (
+                      <div key={r.bookingId} className="mb-2">
+                        <button
+                          onClick={() => setViewingResponse(r)}
+                          className="hover:underline font-semibold"
+                        >
+                          {r.bookingId} ({r.guestName})
+                        </button>
+                        {' '}が {revisedAt} に回答を修正しました
+                      </div>
+                    );
+                  } catch {
+                    return null;
+                  }
+                })}
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const newDismissed = new Set(dismissedRevisions);
+                revisedReservations.forEach(r => newDismissed.add(r.bookingId));
+                setDismissedRevisions(newDismissed);
+              }}
+              className="px-3 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700 whitespace-nowrap"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mx-8">
@@ -538,9 +607,9 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
         <SummaryCard label="受付完了" count={counts.c.completed} sublabel="本日チェックイン:" color="green" onClick={() => { setStatusFilter('completed'); resetPage(); }} />
       </div>
 
-      {/* Filters */}
+      {/* Filters and Pagination */}
       <div className="form-card mx-8">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap gap-2">
             {((['all','pending','responded','questioning','email_sent','completed'] as const) as Array<ReservationRow['status'] | 'all'>).map((s) => (
               <button
@@ -549,6 +618,18 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                 className={`px-3 py-1.5 rounded border text-sm transition-colors ${statusFilter===s? 'bg-purple-600 text-white border-purple-600':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
               >
                 {s === 'all' ? 'すべて' : statusLabels[s]}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-600 text-sm">表示件数:</span>
+            {[10, 20, 50, 0].map((n) => (
+              <button
+                key={n}
+                onClick={() => { setPerPage(n); setCurrentPage(1); }}
+                className={`px-3 py-1 rounded border text-sm transition-colors ${perPage === n ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+              >
+                {n === 0 ? '全件' : n}
               </button>
             ))}
           </div>
@@ -571,26 +652,10 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
         </div>
       </div>
 
-      {/* Pagination controls */}
+      {/* Result count */}
       <div className="form-card mx-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600">表示件数:</span>
-            {[10, 20, 50, 0].map((n) => (
-              <button
-                key={n}
-                onClick={() => { setPerPage(n); setCurrentPage(1); }}
-                className={`px-3 py-1 rounded border transition-colors ${perPage === n ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                {n === 0 ? '全件' : n}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600">
-              {filtered.length}件中 {perPage === 0 ? filtered.length : Math.min((currentPage - 1) * perPage + 1, filtered.length)}-{perPage === 0 ? filtered.length : Math.min(currentPage * perPage, filtered.length)}件を表示
-            </span>
-          </div>
+        <div className="text-sm text-gray-600 text-center">
+          {filtered.length}件中 {perPage === 0 ? filtered.length : Math.min((currentPage - 1) * perPage + 1, filtered.length)}-{perPage === 0 ? filtered.length : Math.min(currentPage * perPage, filtered.length)}件を表示
         </div>
       </div>
 
@@ -886,6 +951,34 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
               <button onClick={() => setViewingResponse(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
             </div>
 
+            {(() => {
+              try {
+                const formData = JSON.parse(viewingResponse.notes);
+                if (formData.isRevision) {
+                  return (
+                    <div className="bg-orange-100 border border-orange-300 rounded p-3 mb-4">
+                      <div className="font-bold text-orange-900">📝 この回答は修正されました</div>
+                      <div className="text-sm text-orange-800 mt-1">
+                        修正日時: {formData.revisedAt ? new Date(formData.revisedAt).toLocaleString('ja-JP') : '不明'}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newDismissed = new Set(dismissedRevisions);
+                          newDismissed.add(viewingResponse.bookingId);
+                          setDismissedRevisions(newDismissed);
+                          setViewingResponse(null);
+                        }}
+                        className="mt-2 px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700"
+                      >
+                        確認済みにする
+                      </button>
+                    </div>
+                  );
+                }
+              } catch {}
+              return null;
+            })()}
+
             <div className="space-y-3">
               <ResponseDetail label="予約ID" value={viewingResponse.bookingId} />
               <ResponseDetail label="ゲスト名" value={viewingResponse.guestName} />
@@ -896,7 +989,8 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                   const formData = JSON.parse(viewingResponse.notes);
                   return (
                     <>
-                      {formData.submittedAt && <ResponseDetail label="回答日時" value={new Date(formData.submittedAt).toLocaleString('ja-JP')} />}
+                      {formData.submittedAt && <ResponseDetail label="初回回答日時" value={new Date(formData.submittedAt).toLocaleString('ja-JP')} />}
+                      {formData.isRevision && formData.revisedAt && <ResponseDetail label="修正日時" value={new Date(formData.revisedAt).toLocaleString('ja-JP')} />}
                       {formData.language && <ResponseDetail label="言語" value={formData.language === 'ja' ? '日本語' : 'English'} />}
                       {formData.hasChildren && <ResponseDetail label="お子様連れ" value={`はい - ${formData.childrenDetails || ''}`} />}
                       {formData.arrivalCountryDate && <ResponseDetail label="日本到着日" value={formData.arrivalCountryDate} />}
