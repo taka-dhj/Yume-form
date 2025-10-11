@@ -8,7 +8,7 @@ export const handler: Handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
-    const { bookingId, formData } = body;
+    const { bookingId, formData, isRevision } = body;
 
     if (!bookingId || !formData) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing bookingId or formData' }) };
@@ -60,6 +60,8 @@ export const handler: Handler = async (event) => {
     if (notesIdx !== -1) {
       const formResponseJson = JSON.stringify({
         submittedAt: new Date().toISOString(),
+        isRevision: isRevision || false,
+        revisedAt: isRevision ? new Date().toISOString() : undefined,
         ...formData,
       });
       updates.push({

@@ -13,13 +13,15 @@ type ReservationData = {
   dinnerIncluded: 'Yes' | 'No' | 'Unknown';
 };
 
-async function fetchReservation(baseUrl: string, bookingId: string): Promise<ReservationData | null> {
+type ReservationWithNotes = ReservationData & { notes?: string };
+
+async function fetchReservation(baseUrl: string, bookingId: string): Promise<ReservationWithNotes | null> {
   try {
     const url = `${baseUrl}/.netlify/functions/reservations`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
     const json = await res.json();
-    const reservation = json.reservations?.find((r: ReservationData) => r.bookingId === bookingId);
+    const reservation = json.reservations?.find((r: ReservationWithNotes) => r.bookingId === bookingId);
     return reservation || null;
   } catch {
     return null;
@@ -59,10 +61,19 @@ export default async function FormPage({ searchParams }: { searchParams: { booki
     );
   }
 
+  let existingResponse = null;
+  try {
+    if (reservation.notes) {
+      existingResponse = JSON.parse(reservation.notes);
+    }
+  } catch {
+    existingResponse = null;
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <GuestForm reservation={reservation} />
+        <GuestForm reservation={reservation} existingResponse={existingResponse} />
       </div>
     </main>
   );

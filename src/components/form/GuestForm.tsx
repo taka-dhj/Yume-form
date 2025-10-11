@@ -111,9 +111,40 @@ const i18n = {
   },
 };
 
-export default function GuestForm({ reservation }: { reservation: ReservationData }) {
-  const [step, setStep] = useState<'language' | 'confirm' | 'questions' | 'review' | 'complete'>('language');
-  const [formData, setFormData] = useState<FormData>({
+type ModalMessage = {
+  type: 'error' | 'success' | 'warning';
+  title: string;
+  message: string;
+  details?: string[];
+};
+
+type ExistingResponse = Partial<FormData> & { submittedAt?: string; isRevision?: boolean; revisedAt?: string };
+
+export default function GuestForm({ reservation, existingResponse }: { reservation: ReservationData; existingResponse?: ExistingResponse | null }) {
+  const [step, setStep] = useState<'language' | 'confirm' | 'questions' | 'review' | 'complete' | 'revision'>('language');
+  const [modalMessage, setModalMessage] = useState<ModalMessage | null>(null);
+  const [isRevision, setIsRevision] = useState(false);
+
+  // Check if there's existing response
+  const hasExistingResponse = existingResponse && existingResponse.submittedAt;
+
+  const [formData, setFormData] = useState<FormData>(hasExistingResponse ? {
+    language: existingResponse.language || 'en',
+    reservationConfirmed: true,
+    hasChildren: existingResponse.hasChildren || false,
+    childrenDetails: existingResponse.childrenDetails || '',
+    arrivalCountryDate: existingResponse.arrivalCountryDate || '',
+    prevNightPlace: existingResponse.prevNightPlace || '',
+    hasPhone: existingResponse.hasPhone || false,
+    phoneNumber: existingResponse.phoneNumber || '',
+    dinnerRequest: existingResponse.dinnerRequest || '',
+    dinnerConsent: existingResponse.dinnerConsent || false,
+    dietaryNeeds: existingResponse.dietaryNeeds || false,
+    dietaryDetails: existingResponse.dietaryDetails || '',
+    arrivalTime: existingResponse.arrivalTime || '',
+    arrivalTimeConsent: existingResponse.arrivalTimeConsent || false,
+    otherNotes: existingResponse.otherNotes || '',
+  } : {
     language: 'en',
     reservationConfirmed: false,
     hasChildren: false,
@@ -136,7 +167,11 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
 
   const handleLanguageSelect = (lang: Language) => {
     setFormData({ ...formData, language: lang });
-    setStep('confirm');
+    if (hasExistingResponse) {
+      setStep('revision');
+    } else {
+      setStep('confirm');
+    }
   };
 
   const handleConfirm = (confirmed: boolean) => {
@@ -144,26 +179,41 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
       setFormData({ ...formData, reservationConfirmed: true });
       setStep('questions');
     } else {
-      alert('Please contact us to correct your reservation details.');
+      setModalMessage({
+        type: 'warning',
+        title: formData.language === 'ja' ? '予約内容の修正' : 'Correction Needed',
+        message: formData.language === 'ja' 
+          ? '予約内容に誤りがある場合は、直接ご連絡ください。' 
+          : 'Please contact us directly to correct your reservation details.',
+      });
     }
   };
 
   const handleSubmit = async () => {
     // Validate dinner consent if dinner is included or requested
+    const errors: string[] = [];
+    
     if (reservation.dinnerIncluded === 'Yes' || formData.dinnerRequest === 'yes') {
       if (!formData.dinnerConsent) {
-        alert(formData.language === 'ja' 
-          ? '夕食に関する注意事項に同意してください。' 
-          : 'Please agree to the dinner terms.');
-        return;
+        errors.push(formData.language === 'ja' 
+          ? '夕食に関する注意事項に同意してください' 
+          : 'Please agree to the dinner terms');
       }
-      // Validate arrival time consent if dinner is included or requested
       if (!formData.arrivalTimeConsent) {
-        alert(formData.language === 'ja' 
-          ? '到着時刻に関する注意事項に同意してください。' 
-          : 'Please agree to the arrival time notice.');
-        return;
+        errors.push(formData.language === 'ja' 
+          ? '到着時刻に関する注意事項に同意してください' 
+          : 'Please agree to the arrival time notice');
       }
+    }
+
+    if (errors.length > 0) {
+      setModalMessage({
+        type: 'error',
+        title: formData.language === 'ja' ? '入力内容を確認してください' : 'Please check your input',
+        message: formData.language === 'ja' ? '以下の項目を確認してください：' : 'Please review the following:',
+        details: errors,
+      });
+      return;
     }
 
     setSubmitting(true);
@@ -171,16 +221,24 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
       const res = await fetch('/.netlify/functions/form-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId: reservation.bookingId, formData }),
+        body: JSON.stringify({ bookingId: reservation.bookingId, formData, isRevision }),
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Error: ${err.error || 'Unknown error'}`);
+        setModalMessage({
+          type: 'error',
+          title: formData.language === 'ja' ? '送信エラー' : 'Submission Error',
+          message: err.error || 'Unknown error',
+        });
       } else {
         setStep('complete');
       }
     } catch (err) {
-      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setModalMessage({
+        type: 'error',
+        title: formData.language === 'ja' ? '送信エラー' : 'Submission Error',
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -196,6 +254,40 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
           </button>
           <button onClick={() => handleLanguageSelect('en')} className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700">
             English
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'revision') {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h1 className="text-2xl font-semibold mb-4">
+          {formData.language === 'ja' ? '回答済みです' : 'Already Responded'}
+        </h1>
+        <p className="text-gray-600 mb-4">
+          {formData.language === 'ja' 
+            ? `${existingResponse?.submittedAt ? new Date(existingResponse.submittedAt).toLocaleString('ja-JP') : ''}に回答を送信済みです。` 
+            : `You have already submitted your response${existingResponse?.submittedAt ? ` on ${new Date(existingResponse.submittedAt).toLocaleString('en-US')}` : ''}.`}
+        </p>
+        <p className="text-gray-700 mb-6">
+          {formData.language === 'ja' 
+            ? '内容を変更しますか？変更する場合、前回の回答内容が事前入力されています。' 
+            : 'Would you like to modify your response? If yes, your previous answers are pre-filled.'}
+        </p>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => { setIsRevision(true); setStep('questions'); }} 
+            className="px-6 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+          >
+            {formData.language === 'ja' ? '変更する' : 'Modify'}
+          </button>
+          <button 
+            onClick={() => setStep('complete')} 
+            className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+          >
+            {formData.language === 'ja' ? 'そのまま' : 'Keep as is'}
           </button>
         </div>
       </div>
@@ -489,7 +581,40 @@ export default function GuestForm({ reservation }: { reservation: ReservationDat
     );
   }
 
-  return null;
+  return (
+    <>
+      {modalMessage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setModalMessage(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <h2 className={`text-xl font-semibold ${modalMessage.type === 'error' ? 'text-red-600' : modalMessage.type === 'success' ? 'text-green-600' : 'text-orange-600'}`}>
+                  {modalMessage.title}
+                </h2>
+                <button onClick={() => setModalMessage(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+              </div>
+              <div className="text-gray-700">
+                <p className="mb-2">{modalMessage.message}</p>
+                {modalMessage.details && modalMessage.details.length > 0 && (
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {modalMessage.details.map((detail, i) => (
+                      <li key={i} className="text-red-600">{detail}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="border-t pt-4">
+                <button onClick={() => setModalMessage(null)} className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                  {formData.language === 'ja' ? '閉じる' : 'Close'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {null}
+    </>
+  );
 }
 
 function ReviewItem({ label, value }: { label: string; value: string }) {

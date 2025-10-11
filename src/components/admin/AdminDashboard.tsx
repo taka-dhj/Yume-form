@@ -333,19 +333,26 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                     disabled={updating === r.bookingId}
                   />
                 </Td>
-                <Td className="w-16 text-center" onClick={(e) => e.stopPropagation()}>
+                <Td className="w-20 text-center" onClick={(e) => e.stopPropagation()}>
                   {(r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') && r.notes && (() => {
                     try {
                       const formData = JSON.parse(r.notes);
                       if (formData.submittedAt) {
                         return (
-                          <button 
-                            className="text-green-600 hover:text-green-700 text-lg" 
-                            title="フォーム回答を確認"
-                            onClick={(e) => { e.stopPropagation(); setViewingResponse(r); }}
-                          >
-                            📋
-                          </button>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <button 
+                              className="text-green-600 hover:text-green-700 text-lg leading-none" 
+                              title="フォーム回答を確認"
+                              onClick={(e) => { e.stopPropagation(); setViewingResponse(r); }}
+                            >
+                              📋
+                            </button>
+                            {formData.isRevision && (
+                              <span className="text-orange-600 text-[9px] font-bold" title={`修正日時: ${formData.revisedAt ? new Date(formData.revisedAt).toLocaleString('ja-JP') : ''}`}>
+                                修正
+                              </span>
+                            )}
+                          </div>
                         );
                       }
                     } catch {}
