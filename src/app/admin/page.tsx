@@ -21,20 +21,26 @@ export default async function AdminPage() {
   const baseEnv = process.env.NEXT_PUBLIC_APP_URL || process.env.URL || process.env.DEPLOY_PRIME_URL || '';
   const baseUrl = baseEnv || (host ? `${protocol}://${host}` : '');
   const { reservations } = baseUrl ? await fetchReservations(baseUrl) : { reservations: [] };
-  return (
-    <main className="px-4 py-6">
-      <div className="max-w-6xl mx-auto space-y-5">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Yumedono 受付管理システム</h1>
-          <div className="flex items-center gap-3">
-            <RefreshButton />
-            <Link href="/" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">Home</Link>
+        return (
+          <div className="page-container">
+            <div className="page-content">
+              <div className="flex items-center justify-between mb-8">
+                <div className="form-card">
+                  <div className="form-card-header">
+                    <h1 className="text-2xl font-bold text-white text-center">
+                      Yumedono 受付管理システム
+                    </h1>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <RefreshButton />
+                  <Link href="/" className="form-button-secondary">ホームに戻る</Link>
+                </div>
+              </div>
+              <AdminDashboard reservations={reservations} />
+            </div>
           </div>
-        </div>
-        <AdminDashboard reservations={reservations} />
-      </div>
-    </main>
-  );
+        );
 }
 
 

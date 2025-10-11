@@ -208,34 +208,35 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const resetPage = () => setCurrentPage(1);
 
   return (
-    <>
     <div className="space-y-6">
       {/* Header / Alerts */}
-      <div className="rounded-lg border bg-rose-50 border-rose-200 p-4">
-        <div className="font-semibold text-rose-800 mb-1">要対応</div>
-        <div className="text-sm text-rose-700 flex flex-wrap gap-x-6 gap-y-1">
-          <span>未送信: {counts.urgentUnsent}件</span>
-          <span>催促期限: {counts.reminderDue}件</span>
-          <span>本日チェックイン未完了: {counts.todayNotCompleted}件</span>
-        </div>
-        <div className="mt-3">
-          <button 
-            onClick={() => {
-              setShowUrgentOnly(!showUrgentOnly);
-              setStatusFilter('all');
-              setSearch('');
-              setCheckinFilter('');
-              resetPage();
-            }}
-            className={`px-3 py-2 rounded text-sm ${showUrgentOnly ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
-          >
-            {showUrgentOnly ? '全件表示' : '要対応のみ表示'}
-          </button>
+      <div className="form-card">
+        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+          <div className="font-semibold text-rose-800 mb-1">要対応</div>
+          <div className="text-sm text-rose-700 flex flex-wrap gap-x-6 gap-y-1">
+            <span>未送信: {counts.urgentUnsent}件</span>
+            <span>催促期限: {counts.reminderDue}件</span>
+            <span>本日チェックイン未完了: {counts.todayNotCompleted}件</span>
+          </div>
+          <div className="mt-3">
+            <button
+              onClick={() => {
+                setShowUrgentOnly(!showUrgentOnly);
+                setStatusFilter('all');
+                setSearch('');
+                setCheckinFilter('');
+                resetPage();
+              }}
+              className={`px-3 py-2 rounded text-sm ${showUrgentOnly ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
+            >
+              {showUrgentOnly ? '全件表示' : '要対応のみ表示'}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <SummaryCard label="未送信" count={counts.c.pending} sublabel="要メール送信" color="red" onClick={() => { setStatusFilter('pending'); resetPage(); }} />
         <SummaryCard label="回答待ち" count={counts.c.email_sent} sublabel={`催促対象: ${counts.reminderDue}件`} color="blue" onClick={() => { setStatusFilter('email_sent'); resetPage(); }} />
         <SummaryCard label="質問中" count={counts.c.questioning} sublabel="個別対応中" color="orange" onClick={() => { setStatusFilter('questioning'); resetPage(); }} />
@@ -243,57 +244,66 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {((['all','pending','responded','questioning','email_sent','completed'] as const) as Array<ReservationRow['status'] | 'all'>).map((s) => (
-          <button
-            key={s}
-            onClick={() => { setStatusFilter(s); resetPage(); }}
-            className={`px-3 py-1.5 rounded border text-sm ${statusFilter===s? 'bg-blue-600 text-white border-blue-600':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-          >
-            {s === 'all' ? 'すべて' : s}
-          </button>
-        ))}
+      <div className="form-card">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap gap-2">
+            {((['all','pending','responded','questioning','email_sent','completed'] as const) as Array<ReservationRow['status'] | 'all'>).map((s) => (
+              <button
+                key={s}
+                onClick={() => { setStatusFilter(s); resetPage(); }}
+                className={`px-3 py-1.5 rounded border text-sm transition-colors ${statusFilter===s? 'bg-purple-600 text-white border-purple-600':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+              >
+                {s === 'all' ? 'すべて' : s}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Search and date */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); resetPage(); }}
-          placeholder="予約ID・氏名・メール・OTAで検索"
-          className="flex-1 border rounded px-3 py-2"
-        />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">チェックイン</span>
-          <input type="date" value={checkinFilter} onChange={(e)=>{ setCheckinFilter(e.target.value); resetPage(); }} className="border rounded px-2 py-2" />
+      <div className="form-card">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
+            placeholder="予約ID・氏名・メール・OTAで検索"
+            className="form-input flex-1"
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">チェックイン</span>
+            <input type="date" value={checkinFilter} onChange={(e)=>{ setCheckinFilter(e.target.value); resetPage(); }} className="form-input" />
+          </div>
         </div>
       </div>
 
       {/* Pagination controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-gray-600">表示件数:</span>
-          {[10, 20, 50, 0].map((n) => (
-            <button
-              key={n}
-              onClick={() => { setPerPage(n); setCurrentPage(1); }}
-              className={`px-3 py-1 rounded border ${perPage === n ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-            >
-              {n === 0 ? '全件' : n}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-gray-600">
-            {filtered.length}件中 {perPage === 0 ? filtered.length : Math.min((currentPage - 1) * perPage + 1, filtered.length)}-{perPage === 0 ? filtered.length : Math.min(currentPage * perPage, filtered.length)}件を表示
-          </span>
+      <div className="form-card">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-600">表示件数:</span>
+            {[10, 20, 50, 0].map((n) => (
+              <button
+                key={n}
+                onClick={() => { setPerPage(n); setCurrentPage(1); }}
+                className={`px-3 py-1 rounded border transition-colors ${perPage === n ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+              >
+                {n === 0 ? '全件' : n}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-600">
+              {filtered.length}件中 {perPage === 0 ? filtered.length : Math.min((currentPage - 1) * perPage + 1, filtered.length)}-{perPage === 0 ? filtered.length : Math.min(currentPage * perPage, filtered.length)}件を表示
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Table - Desktop */}
-      <div className="hidden md:block overflow-x-auto border rounded">
-        <table className="min-w-full text-sm text-gray-800">
-          <thead className="bg-gray-50 sticky top-0">
+      <div className="form-card p-0 overflow-hidden">
+        <div className="hidden md:block overflow-x-auto">
+          <table className="min-w-full text-sm text-gray-800">
+            <thead className="bg-gray-50 sticky top-0">
             <tr>
               <ThSortable field="bookingId" currentField={sortField} direction={sortDirection} onSort={handleSort}>
                 予約番号
@@ -352,6 +362,11 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                                 修正
                               </span>
                             )}
+                            {formData.otherNotes && formData.otherNotes.trim() && (
+                              <span className="text-red-600 text-[9px] font-bold" title="その他要望あり - 要確認">
+                                要確認
+                              </span>
+                            )}
                           </div>
                         );
                       }
@@ -407,17 +422,18 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Card View - Mobile */}
       <div className="md:hidden space-y-3">
         {paginatedData.length === 0 && (
-          <div className="bg-white border rounded p-6 text-center text-gray-500">該当データがありません</div>
+          <div className="form-card text-center text-gray-500">該当データがありません</div>
         )}
         {paginatedData.map((r: ReservationRow) => (
           <div
             key={r.bookingId}
-            className={`${rowBg[r.status]} border rounded p-4 space-y-3`}
+            className={`form-card space-y-3 ${rowBg[r.status]}`}
             onClick={() => {
               if (r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') {
                 setViewingResponse(r);
@@ -441,12 +457,19 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
                     const formData = JSON.parse(r.notes);
                     if (formData.submittedAt) {
                       return (
-                        <span 
-                          className="text-green-600 text-lg" 
-                          title="フォーム回答あり"
-                        >
-                          📋
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span 
+                            className="text-green-600 text-lg" 
+                            title="フォーム回答あり"
+                          >
+                            📋
+                          </span>
+                          {formData.otherNotes && formData.otherNotes.trim() && (
+                            <span className="text-red-600 text-[9px] font-bold" title="その他要望あり - 要確認">
+                              要確認
+                            </span>
+                          )}
+                        </div>
                       );
                     }
                   } catch {}
@@ -540,22 +563,22 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
           </button>
         </div>
       )}
-    </div>
+      </div>
 
-    {/* Email Preview Modal */}
-    {emailPreview && (() => {
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      const formUrl = `${baseUrl}/form?bookingId=${emailPreview.reservation.bookingId}`;
-      
-      const defaultSubject = emailPreview.type === 'initial'
-        ? (emailPreview.language === 'ja'
-          ? `【夢殿】ご予約確認とご質問 - ${emailPreview.reservation.checkinDate}ご宿泊`
-          : `【Yumedono】Reservation Confirmation & Questions - Check-in ${emailPreview.reservation.checkinDate}`)
-        : (emailPreview.language === 'ja'
-          ? `【夢殿】ご予約受付完了 - ${emailPreview.reservation.checkinDate}ご宿泊`
-          : `【Yumedono】Reception Completed - Check-in ${emailPreview.reservation.checkinDate}`);
-      
-      const defaultBody = emailPreview.type === 'initial'
+      {/* Email Preview Modal */}
+      {emailPreview && (() => {
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+        const formUrl = `${baseUrl}/form?bookingId=${emailPreview.reservation.bookingId}`;
+        
+        const defaultSubject = emailPreview.type === 'initial'
+          ? (emailPreview.language === 'ja'
+            ? `【夢殿】ご予約確認とご質問 - ${emailPreview.reservation.checkinDate}ご宿泊`
+            : `【Yumedono】Reservation Confirmation & Questions - Check-in ${emailPreview.reservation.checkinDate}`)
+          : (emailPreview.language === 'ja'
+            ? `【夢殿】ご予約受付完了 - ${emailPreview.reservation.checkinDate}ご宿泊`
+            : `【Yumedono】Reception Completed - Check-in ${emailPreview.reservation.checkinDate}`);
+        
+        const defaultBody = emailPreview.type === 'initial'
         ? (emailPreview.language === 'ja'
         ? `${emailPreview.reservation.guestName} 様
 

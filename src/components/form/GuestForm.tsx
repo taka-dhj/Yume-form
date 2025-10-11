@@ -29,6 +29,8 @@ type FormData = {
   dietaryDetails: string;
   arrivalTime: string;
   arrivalTimeConsent: boolean;
+  needsPickup: boolean;
+  pickupConsent: boolean;
   otherNotes: string;
 };
 
@@ -46,7 +48,7 @@ const i18n = {
     dinnerIncluded: '夕食',
     confirmReservation: 'この内容で間違いありませんか？',
     yes: 'はい',
-    no: 'いいえ（修正が必要）',
+    no: 'いいえ',
     next: '次へ',
     back: '戻る',
     submit: '送信',
@@ -64,6 +66,9 @@ const i18n = {
     arrivalTime: '到着予定時刻を教えてください',
     arrivalTimeNotice: '【到着時刻に関する重要なお願い】\n\n当館では、皆様に最高のお食事体験をお届けするため、お食事は全て当日調理いたしております。\n\n夕食付きプランのお客様へ：\n• ご夕食は17時を目安にご準備させていただきます。\n• 17時以降にご到着された場合、衛生法により作り置きができないため、ご夕食の提供ができかねます。\n• 食材の仕入れや仕込みは既に完了しておりますため、遅延による返金は承りかねます。\n• お客様の安全とお食事の品質を守るための規定でございますので、何卒ご理解賜りますようお願い申し上げます。\n• できる限り17時までのご到着をお願いいたします。',
     arrivalTimeConsent: '到着時刻に関する注意事項を読み、同意します',
+    needsPickup: 'JR河口湖駅からの送迎が必要ですか？',
+    pickupNotice: '【送迎サービスについて】\n\n当旅館では、JR河口湖駅からホテルまでの無料送迎を12:00〜17:00の間で行っております。\n\n必要な場合は、JR河口湖駅到着後、必ず+81-555-72-6111へお電話いただきまして送迎の手配をお願いいたします。\n\n※送迎は事前予約制となっております。\n※到着時刻が17時を過ぎる場合は、タクシーをご利用ください。',
+    pickupConsent: '送迎に関する注意事項を読み、理解しました',
     otherNotes: 'その他ご要望',
     reviewTitle: '入力内容の確認',
     reviewMessage: '以下の内容でよろしいですか？',
@@ -102,6 +107,9 @@ const i18n = {
     arrivalTime: 'What time will you arrive?',
     arrivalTimeNotice: '【Important Notice Regarding Arrival Time】\n\nAt our inn, we prepare all meals fresh on the day to provide you with the finest dining experience.\n\nFor guests with dinner included:\n• We prepare dinner with an arrival time of 5:00 PM in mind.\n• If you arrive after 5:00 PM, we regret that we cannot serve dinner due to hygiene regulations that prohibit keeping prepared food.\n• As ingredients have already been procured and prepared, we are unable to offer refunds for late arrivals.\n• This policy exists to ensure your safety and maintain the quality of our cuisine. We appreciate your understanding.\n• We kindly request that you arrive by 5:00 PM whenever possible.',
     arrivalTimeConsent: 'I have read and agree to the arrival time notice',
+    needsPickup: 'Do you need pickup service from JR Kawaguchiko Station?',
+    pickupNotice: '【About Pickup Service】\n\nWe provide free pickup service from JR Kawaguchiko Station to our hotel between 12:00 PM and 5:00 PM.\n\nIf you need pickup service, please call +81-555-72-6111 immediately after arriving at JR Kawaguchiko Station to arrange pickup.\n\n※Pickup service requires advance reservation.\n※If you arrive after 5:00 PM, please use a taxi.',
+    pickupConsent: 'I have read and understood the pickup service information',
     otherNotes: 'Other requests',
     reviewTitle: 'Review Your Responses',
     reviewMessage: 'Please confirm the information below:',
@@ -143,6 +151,8 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
     dietaryDetails: existingResponse.dietaryDetails || '',
     arrivalTime: existingResponse.arrivalTime || '',
     arrivalTimeConsent: existingResponse.arrivalTimeConsent || false,
+    needsPickup: existingResponse.needsPickup || false,
+    pickupConsent: existingResponse.pickupConsent || false,
     otherNotes: existingResponse.otherNotes || '',
   } : {
     language: 'en',
@@ -159,6 +169,8 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
     dietaryDetails: '',
     arrivalTime: '',
     arrivalTimeConsent: false,
+    needsPickup: false,
+    pickupConsent: false,
     otherNotes: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -204,6 +216,13 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
           ? '到着時刻に関する注意事項に同意してください' 
           : 'Please agree to the arrival time notice');
       }
+    }
+
+    // Validate pickup consent if pickup is needed
+    if (formData.needsPickup && !formData.pickupConsent) {
+      errors.push(formData.language === 'ja' 
+        ? '送迎に関する注意事項に同意してください' 
+        : 'Please agree to the pickup service terms');
     }
 
     if (errors.length > 0) {
@@ -322,22 +341,26 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
 
   if (step === 'questions') {
     return (
-      <div className="bg-white rounded-lg shadow p-6 space-y-6">
-        <h1 className="text-2xl font-semibold mb-4">{t.title}</h1>
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <div className="bg-purple-600 -m-6 mb-6 rounded-t-lg px-6 py-4">
+            <h1 className="text-2xl font-bold text-white text-center">{t.title}</h1>
+          </div>
+        </div>
 
         {/* Children */}
-        <div>
-          <label className="block font-semibold mb-2">{t.hasChildren}</label>
-          <div className="flex gap-3">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t.hasChildren}</label>
+          <div className="flex gap-3 mb-4">
             <button
               onClick={() => setFormData({ ...formData, hasChildren: true })}
-              className={`px-4 py-2 rounded ${formData.hasChildren ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded transition-colors ${formData.hasChildren ? 'bg-purple-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
             >
               {t.yes}
             </button>
             <button
               onClick={() => setFormData({ ...formData, hasChildren: false, childrenDetails: '' })}
-              className={`px-4 py-2 rounded ${!formData.hasChildren ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded transition-colors ${!formData.hasChildren ? 'bg-purple-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
             >
               {t.no}
             </button>
@@ -348,30 +371,30 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
               value={formData.childrenDetails}
               onChange={(e) => setFormData({ ...formData, childrenDetails: e.target.value })}
               placeholder={t.childrenDetails}
-              className="mt-2 w-full border rounded px-3 py-2"
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
             />
           )}
         </div>
 
         {/* Arrival */}
-        <div>
-          <label className="block font-semibold mb-2">{t.arrivalCountryDate}</label>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t.arrivalCountryDate}</label>
           <input
             type="date"
             value={formData.arrivalCountryDate}
             onChange={(e) => setFormData({ ...formData, arrivalCountryDate: e.target.value })}
-            className="w-full border rounded px-3 py-2"
+            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
           />
         </div>
 
         {/* Prev night */}
-        <div>
-          <label className="block font-semibold mb-2">{t.prevNightPlace}</label>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t.prevNightPlace}</label>
           <input
             type="text"
             value={formData.prevNightPlace}
             onChange={(e) => setFormData({ ...formData, prevNightPlace: e.target.value })}
-            className="w-full border rounded px-3 py-2"
+            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
           />
         </div>
 
@@ -497,6 +520,40 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
           />
         </div>
 
+        {/* Pickup service */}
+        <div>
+          <label className="block font-semibold mb-2">{t.needsPickup}</label>
+          <div className="flex gap-3 mb-3">
+            <button
+              onClick={() => setFormData({ ...formData, needsPickup: true })}
+              className={`px-4 py-2 rounded ${formData.needsPickup ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+            >
+              {t.yes}
+            </button>
+            <button
+              onClick={() => setFormData({ ...formData, needsPickup: false, pickupConsent: false })}
+              className={`px-4 py-2 rounded ${!formData.needsPickup ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+            >
+              {t.no}
+            </button>
+          </div>
+          
+          {formData.needsPickup && (
+            <div className="border border-blue-300 bg-blue-50 p-4 rounded">
+              <pre className="whitespace-pre-wrap text-sm text-gray-800 mb-3 font-sans">{t.pickupNotice}</pre>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.pickupConsent}
+                  onChange={(e) => setFormData({ ...formData, pickupConsent: e.target.checked })}
+                  className="mt-1"
+                />
+                <span className="text-sm font-semibold">{t.pickupConsent}</span>
+              </label>
+            </div>
+          )}
+        </div>
+
         {/* Other notes */}
         <div>
           <label className="block font-semibold mb-2">{t.otherNotes}</label>
@@ -508,16 +565,18 @@ export default function GuestForm({ reservation, existingResponse }: { reservati
           />
         </div>
 
-        <div className="flex gap-3">
-          <button onClick={() => setStep('confirm')} className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-            {t.back}
-          </button>
-          <button
-            onClick={() => setStep('review')}
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            {t.next}
-          </button>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setStep('confirm')} className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+              {t.back}
+            </button>
+            <button
+              onClick={() => setStep('review')}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {t.next}
+            </button>
+          </div>
         </div>
       </div>
     );

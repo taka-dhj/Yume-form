@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import GuestForm from '@/components/form/GuestForm';
+import TopButton from '@/components/common/TopButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,8 +40,8 @@ export default async function FormPage({ searchParams }: { searchParams: { booki
 
   if (!bookingId) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-6 text-center">
+      <main className="page-container flex items-center justify-center p-6">
+        <div className="form-card max-w-md w-full text-center">
           <h1 className="text-xl font-semibold text-red-600 mb-2">予約IDが必要です</h1>
           <p className="text-gray-600">URLに予約ID（?bookingId=xxx）を指定してください。</p>
         </div>
@@ -52,8 +53,8 @@ export default async function FormPage({ searchParams }: { searchParams: { booki
 
   if (!reservation) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-6 text-center">
+      <main className="page-container flex items-center justify-center p-6">
+        <div className="form-card max-w-md w-full text-center">
           <h1 className="text-xl font-semibold text-red-600 mb-2">予約が見つかりません</h1>
           <p className="text-gray-600">予約ID「{bookingId}」は存在しません。</p>
         </div>
@@ -71,9 +72,12 @@ export default async function FormPage({ searchParams }: { searchParams: { booki
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
-        <GuestForm reservation={reservation} existingResponse={existingResponse} />
+    <main className="page-container">
+      <TopButton />
+      <div className="page-content">
+        <div className="max-w-3xl mx-auto">
+          <GuestForm reservation={reservation} existingResponse={existingResponse} />
+        </div>
       </div>
     </main>
   );
