@@ -168,21 +168,61 @@ body {
 }
 
 .table-scroll-container::-webkit-scrollbar {
-  height: 12px;
+  height: 14px;
 }
 
 .table-scroll-container::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 6px;
+  background: #e2e8f0;
+  border-radius: 0;
 }
 
 .table-scroll-container::-webkit-scrollbar-thumb {
   background: #94a3b8;
-  border-radius: 6px;
+  border-radius: 0;
+  border: 2px solid #e2e8f0;
 }
 
 .table-scroll-container::-webkit-scrollbar-thumb:hover {
   background: #64748b;
+}
+
+/* Dual scrollbar wrapper */
+.dual-scroll-wrapper {
+  position: relative;
+}
+
+.scroll-sync-top {
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 20px;
+  margin-bottom: -20px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.scroll-sync-top::-webkit-scrollbar {
+  height: 14px;
+}
+
+.scroll-sync-top::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+.scroll-sync-top::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2px solid #e2e8f0;
+}
+
+.scroll-sync-top::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.scroll-sync-content {
+  width: 100%;
+  height: 1px;
 }
 
 /* Status badge styles */

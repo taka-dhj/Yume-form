@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 
@@ -20,11 +20,11 @@ export type ReservationRow = {
 };
 
 const rowBg: Record<ReservationRow['status'], string> = {
-  pending: '',
-  email_sent: '',
-  responded: '',
-  questioning: '',
-  completed: '',
+  pending: 'bg-red-50',
+  email_sent: 'bg-blue-50',
+  responded: 'bg-yellow-50',
+  questioning: 'bg-orange-50',
+  completed: 'bg-green-50',
 };
 
 const statusLabels: Record<ReservationRow['status'], string> = {
@@ -122,6 +122,50 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showUrgentOnly, setShowUrgentOnly] = useState(false);
   const [dismissedRevisions, setDismissedRevisions] = useState<Set<string>>(new Set());
+  
+  // Refs for scroll sync
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+
+  // Sync scroll between top and table
+  useEffect(() => {
+    const topScroll = topScrollRef.current;
+    const tableScroll = tableScrollRef.current;
+    
+    if (!topScroll || !tableScroll) return;
+
+    // Set the width of top scroll content to match table width
+    const updateScrollWidth = () => {
+      const table = tableScroll.querySelector('table');
+      if (table && topScroll.firstChild) {
+        (topScroll.firstChild as HTMLElement).style.width = `${table.scrollWidth}px`;
+      }
+    };
+
+    updateScrollWidth();
+    window.addEventListener('resize', updateScrollWidth);
+
+    const handleTopScroll = () => {
+      if (tableScroll.scrollLeft !== topScroll.scrollLeft) {
+        tableScroll.scrollLeft = topScroll.scrollLeft;
+      }
+    };
+
+    const handleTableScroll = () => {
+      if (topScroll.scrollLeft !== tableScroll.scrollLeft) {
+        topScroll.scrollLeft = tableScroll.scrollLeft;
+      }
+    };
+
+    topScroll.addEventListener('scroll', handleTopScroll);
+    tableScroll.addEventListener('scroll', handleTableScroll);
+
+    return () => {
+      window.removeEventListener('resize', updateScrollWidth);
+      topScroll.removeEventListener('scroll', handleTopScroll);
+      tableScroll.removeEventListener('scroll', handleTableScroll);
+    };
+  }, []);
 
   // Email Preview Modal content
   const emailPreviewModal = useMemo(() => {
@@ -663,7 +707,13 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
 
       {/* Table - Desktop */}
       <div className="form-card p-0 overflow-hidden mx-8">
-        <div className="hidden md:block table-scroll-container">
+        <div className="hidden md:block">
+          {/* Top scrollbar */}
+          <div ref={topScrollRef} className="scroll-sync-top">
+            <div className="scroll-sync-content" style={{ width: '1200px' }}></div>
+          </div>
+          {/* Table with bottom scrollbar */}
+          <div ref={tableScrollRef} className="table-scroll-container">
           <table className="min-w-full text-sm text-gray-800">
             <thead className="bg-gray-50 sticky top-0">
             <tr>
@@ -775,7 +825,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                   }
                 }}
               >
-                <td colSpan={8} className="px-3 py-1 text-[10px] bg-gray-50">
+                <td colSpan={8} className="px-3 py-2 text-xs bg-gray-50">
                   {(() => {
                     const summary = extractResponseSummary(r.notes);
                     if (!summary) {
@@ -803,6 +853,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
             ))}
           </tbody>
         </table>
+          </div>
         </div>
       </div>
 
@@ -851,7 +902,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
 
             {/* Response summary - always show */}
             <div 
-              className="text-[10px] leading-tight p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-blue-50"
+              className="text-xs leading-tight p-2 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-blue-50"
               onClick={(e) => {
                 e.stopPropagation();
                 const summary = extractResponseSummary(r.notes);
