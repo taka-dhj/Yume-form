@@ -22,21 +22,21 @@ export default async function AdminPage() {
   const baseUrl = baseEnv || (host ? `${protocol}://${host}` : '');
   const { reservations } = baseUrl ? await fetchReservations(baseUrl) : { reservations: [] };
         return (
-          <div className="page-container">
-            <div className="page-content">
-              <div className="flex items-center justify-between mb-8">
-                <div className="form-card">
-                  <div className="form-card-header">
-                    <h1 className="text-2xl font-bold text-white text-center">
-                      Yumedono 受付管理システム
-                    </h1>
+          <div className="min-h-screen bg-white">
+            <div className="border-b bg-white sticky top-0 z-10 shadow-sm">
+              <div className="max-w-full px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    Yumedono 受付管理システム
+                  </h1>
+                  <div className="flex items-center gap-3">
+                    <RefreshButton />
+                    <Link href="/" className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">ホームに戻る</Link>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <RefreshButton />
-                  <Link href="/" className="form-button-secondary">ホームに戻る</Link>
-                </div>
               </div>
+            </div>
+            <div className="p-4">
               <AdminDashboard reservations={reservations} />
             </div>
           </div>

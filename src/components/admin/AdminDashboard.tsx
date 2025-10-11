@@ -20,11 +20,11 @@ export type ReservationRow = {
 };
 
 const rowBg: Record<ReservationRow['status'], string> = {
-  pending: 'bg-red-50',
-  email_sent: 'bg-gray-50',
-  responded: 'bg-yellow-50',
-  questioning: 'bg-orange-50',
-  completed: 'bg-green-50',
+  pending: '',
+  email_sent: '',
+  responded: '',
+  questioning: '',
+  completed: '',
 };
 
 function isSameDateIso(iso: string, target: Date): boolean {
@@ -594,7 +594,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
               </tr>
             )}
             {paginatedData.map((r: ReservationRow) => (
-              <tr key={r.bookingId} className={`border-t ${rowBg[r.status]} text-gray-800 ${r.status === 'responded' ? 'cursor-pointer hover:bg-yellow-100' : ''}`} onClick={() => {
+              <tr key={r.bookingId} className={`border-t ${rowBg[r.status]} text-gray-800 ${r.status === 'responded' ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={() => {
                 if (r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') {
                   setViewingResponse(r);
                 }
