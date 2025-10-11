@@ -482,7 +482,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
   return (
     <div className="space-y-6">
       {/* Header / Alerts */}
-      <div className="form-card">
+      <div className="form-card mx-8">
         <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 flex items-start gap-4">
           <button
             onClick={() => {
@@ -531,7 +531,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mx-8">
         <SummaryCard label="未送信" count={counts.c.pending} sublabel="要メール送信" color="red" onClick={() => { setStatusFilter('pending'); resetPage(); }} />
         <SummaryCard label="回答待ち" count={counts.c.email_sent} sublabel={`催促対象: ${counts.reminderDue}件`} color="blue" onClick={() => { setStatusFilter('email_sent'); resetPage(); }} />
         <SummaryCard label="質問中" count={counts.c.questioning} sublabel="個別対応中" color="orange" onClick={() => { setStatusFilter('questioning'); resetPage(); }} />
@@ -539,7 +539,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
       </div>
 
       {/* Filters */}
-      <div className="form-card">
+      <div className="form-card mx-8">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-wrap gap-2">
             {((['all','pending','responded','questioning','email_sent','completed'] as const) as Array<ReservationRow['status'] | 'all'>).map((s) => (
@@ -556,7 +556,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
       </div>
 
       {/* Search and date */}
-      <div className="form-card">
+      <div className="form-card mx-8">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             value={search}
@@ -572,7 +572,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
       </div>
 
       {/* Pagination controls */}
-      <div className="form-card">
+      <div className="form-card mx-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-gray-600">表示件数:</span>
@@ -595,8 +595,8 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
       </div>
 
       {/* Table - Desktop */}
-      <div className="form-card p-0 overflow-hidden">
-        <div className="hidden md:block overflow-x-auto">
+      <div className="form-card p-0 overflow-hidden mx-8">
+        <div className="hidden md:block table-scroll-container">
           <table className="min-w-full text-sm text-gray-800">
             <thead className="bg-gray-50 sticky top-0">
             <tr>
@@ -625,21 +625,13 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
               </tr>
             )}
             {paginatedData.map((r: ReservationRow) => (
+              <>
               <tr key={r.bookingId} className={`border-t ${rowBg[r.status]} text-gray-800 ${r.status === 'responded' ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={() => {
                 if (r.status === 'responded' || r.status === 'questioning' || r.status === 'completed') {
                   setViewingResponse(r);
                 }
               }}>
-                <Td className="font-mono text-gray-800 w-32">
-                  <div className="flex flex-col gap-1">
-                    <div className="font-semibold">{r.bookingId}</div>
-                    {extractResponseSummary(r.notes) && (
-                      <div className="text-[10px] text-gray-600 leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
-                        {extractResponseSummary(r.notes)}
-                      </div>
-                    )}
-                  </div>
-                </Td>
+                <Td className="font-mono text-gray-800 w-32 font-semibold">{r.bookingId}</Td>
                 <Td onClick={(e) => e.stopPropagation()}>
                   <StatusBadge 
                     status={r.status} 
@@ -723,6 +715,14 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                   </div>
                 </Td>
               </tr>
+              {extractResponseSummary(r.notes) && (
+                <tr key={`${r.bookingId}-summary`} className="border-t-0">
+                  <td colSpan={10} className="px-3 py-1 text-[10px] text-gray-600 bg-gray-50">
+                    {extractResponseSummary(r.notes)}
+                  </td>
+                </tr>
+              )}
+              </>
             ))}
           </tbody>
         </table>
@@ -730,7 +730,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
       </div>
 
       {/* Card View - Mobile */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-3 mx-4">
         {paginatedData.length === 0 && (
           <div className="form-card text-center text-gray-500">該当データがありません</div>
         )}
@@ -832,7 +832,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
 
       {/* Page navigation */}
       {perPage > 0 && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 mx-8">
           <button
             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}

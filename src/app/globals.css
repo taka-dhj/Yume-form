@@ -161,6 +161,30 @@ body {
   background: #f9fafb;
 }
 
+/* Table scroll styles */
+.table-scroll-container {
+  overflow-x: auto;
+  position: relative;
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  height: 12px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 6px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Status badge styles */
 .status-pending {
   background: #fef2f2;
