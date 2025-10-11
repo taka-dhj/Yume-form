@@ -66,6 +66,224 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showUrgentOnly, setShowUrgentOnly] = useState(false);
 
+  // Email Preview Modal content
+  const emailPreviewModal = useMemo(() => {
+    if (!emailPreview) return null;
+    
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const formUrl = `${baseUrl}/form?bookingId=${emailPreview.reservation.bookingId}`;
+    
+    const defaultSubject = emailPreview.type === 'initial'
+      ? (emailPreview.language === 'ja'
+        ? `【夢殿】ご予約確認とご質問 - ${emailPreview.reservation.checkinDate}ご宿泊`
+        : `【Yumedono】Reservation Confirmation & Questions - Check-in ${emailPreview.reservation.checkinDate}`)
+      : (emailPreview.language === 'ja'
+        ? `【夢殿】ご予約受付完了 - ${emailPreview.reservation.checkinDate}ご宿泊`
+        : `【Yumedono】Reception Completed - Check-in ${emailPreview.reservation.checkinDate}`);
+    
+    const defaultBody = emailPreview.type === 'initial'
+    ? (emailPreview.language === 'ja'
+    ? `${emailPreview.reservation.guestName} 様
+
+いつもありがとうございます。
+${emailPreview.reservation.checkinDate}より${emailPreview.reservation.nights}泊のご予約をいただき、誠にありがとうございます。
+
+ご宿泊に際しまして、いくつかご質問がございます。
+お決まりになりましたら、下記のフォームよりご回答をお願いいたします。
+
+【ご回答フォーム】
+${formUrl}
+
+上記フォームよりご回答をお待ちしております。
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+夢殿
+予約ID: ${emailPreview.reservation.bookingId}`
+    : `Dear Mr./Ms. ${emailPreview.reservation.guestName}
+
+Hello,
+Thank you for your reservation on ${emailPreview.reservation.checkinDate} for ${emailPreview.reservation.nights} night stay.
+
+We have some questions for you.
+Please inform us your details after you decided.
+
+【Response Form】
+${formUrl}
+
+Please submit your response through the form above.
+If you have any questions, please feel free to contact us.
+
+Best regards,
+Yumedono
+Booking ID: ${emailPreview.reservation.bookingId}`)
+    : (emailPreview.language === 'ja'
+      ? `${emailPreview.reservation.guestName} 様
+
+いつもありがとうございます。
+
+${emailPreview.reservation.checkinDate}より${emailPreview.reservation.nights}泊のご予約につきまして、ご回答をいただき誠にありがとうございました。
+受付が完了いたしましたことをご報告申し上げます。
+
+当日は心よりお待ちしております。
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+夢殿
+予約ID: ${emailPreview.reservation.bookingId}`
+      : `Dear Mr./Ms. ${emailPreview.reservation.guestName}
+
+Hello,
+
+Thank you for your response regarding your reservation on ${emailPreview.reservation.checkinDate} for ${emailPreview.reservation.nights} night stay.
+We are pleased to inform you that your reception is now complete.
+
+We look forward to welcoming you on the day.
+If you have any questions, please feel free to contact us.
+
+Best regards,
+Yumedono
+Booking ID: ${emailPreview.reservation.bookingId}`);
+
+    const currentSubject = emailPreview.editableSubject ?? defaultSubject;
+    const currentBody = emailPreview.editableBody ?? defaultBody;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setEmailPreview(null)}>
+        <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-xl font-semibold">メールプレビュー</h2>
+              <button onClick={() => setEmailPreview(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block font-semibold text-sm mb-1">言語選択</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEmailPreview({ reservation: emailPreview.reservation, type: emailPreview.type, language: 'ja', editableSubject: undefined, editableBody: undefined })}
+                    className={`px-4 py-2 rounded ${emailPreview.language === 'ja' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                  >
+                    日本語
+                  </button>
+                  <button
+                    onClick={() => setEmailPreview({ reservation: emailPreview.reservation, type: emailPreview.type, language: 'en', editableSubject: undefined, editableBody: undefined })}
+                    className={`px-4 py-2 rounded ${emailPreview.language === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                  >
+                    English
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-sm mb-1">宛先</label>
+                <div className="text-gray-800">{emailPreview.reservation.email || '（メールアドレス未登録）'}</div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-sm mb-1">件名</label>
+                <input
+                  type="text"
+                  value={currentSubject}
+                  onChange={(e) => setEmailPreview({ ...emailPreview, editableSubject: e.target.value })}
+                  className="w-full border rounded px-3 py-2 text-gray-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-sm mb-1">本文</label>
+                <textarea
+                  value={currentBody}
+                  onChange={(e) => setEmailPreview({ ...emailPreview, editableBody: e.target.value })}
+                  className="w-full border rounded px-3 py-2 text-gray-800 font-sans text-sm"
+                  rows={15}
+                />
+              </div>
+            </div>
+
+            <div className="border-t pt-4 flex gap-3">
+              <button onClick={() => setEmailPreview(null)} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                キャンセル
+              </button>
+              <button
+                onClick={() => emailPreview.reservation.email && handleSendEmail(emailPreview.reservation.email, currentSubject, currentBody, emailPreview.reservation.bookingId, emailPreview.type)}
+                disabled={!emailPreview.reservation.email || sendingEmail}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sendingEmail ? '送信中...' : 'メール送信'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }, [emailPreview, sendingEmail]);
+
+  // Email History Modal content
+  const emailHistoryModal = useMemo(() => {
+    if (!viewingEmailHistory) return null;
+    
+    type EmailHistoryItem = {
+      type: 'initial' | 'reception';
+      to: string;
+      subject: string;
+      body: string;
+      sentAt: string;
+    };
+    
+    let history: EmailHistoryItem[] = [];
+    try {
+      history = viewingEmailHistory.emailHistory ? JSON.parse(viewingEmailHistory.emailHistory) : [];
+    } catch {
+      history = [];
+    }
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setViewingEmailHistory(null)}>
+        <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-xl font-semibold">メール送信履歴</h2>
+              <button onClick={() => setViewingEmailHistory(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+
+            <div className="space-y-3">
+              {history.length === 0 ? (
+                <div className="text-gray-500 text-center py-8">送信履歴がありません</div>
+              ) : (
+                <div className="space-y-3">
+                  {history.map((item, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${item.type === 'initial' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                          {item.type === 'initial' ? '初回メール' : '受付完了メール'}
+                        </span>
+                        <span className="text-sm text-gray-500">{new Date(item.sentAt).toLocaleString('ja-JP')}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div><strong>宛先:</strong> {item.to}</div>
+                        <div><strong>件名:</strong> {item.subject}</div>
+                        <div className="mt-2">
+                          <strong>本文:</strong>
+                          <pre className="mt-1 whitespace-pre-wrap text-xs bg-white p-2 rounded border">{item.body}</pre>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t pt-4">
+              <button onClick={() => setViewingEmailHistory(null)} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }, [viewingEmailHistory]);
+
   const today = useMemo(() => new Date(), []);
 
   const handleSort = (field: SortField) => {
@@ -563,160 +781,12 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
           </button>
         </div>
       )}
-      </div>
-
+      
       {/* Email Preview Modal */}
-      {emailPreview && (() => {
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        const formUrl = `${baseUrl}/form?bookingId=${emailPreview.reservation.bookingId}`;
-        
-        const defaultSubject = emailPreview.type === 'initial'
-          ? (emailPreview.language === 'ja'
-            ? `【夢殿】ご予約確認とご質問 - ${emailPreview.reservation.checkinDate}ご宿泊`
-            : `【Yumedono】Reservation Confirmation & Questions - Check-in ${emailPreview.reservation.checkinDate}`)
-          : (emailPreview.language === 'ja'
-            ? `【夢殿】ご予約受付完了 - ${emailPreview.reservation.checkinDate}ご宿泊`
-            : `【Yumedono】Reception Completed - Check-in ${emailPreview.reservation.checkinDate}`);
-        
-        const defaultBody = emailPreview.type === 'initial'
-        ? (emailPreview.language === 'ja'
-        ? `${emailPreview.reservation.guestName} 様
+      {emailPreviewModal}
 
-いつもありがとうございます。
-${emailPreview.reservation.checkinDate}より${emailPreview.reservation.nights}泊のご予約をいただき、誠にありがとうございます。
-
-ご宿泊に際しまして、いくつかご質問がございます。
-お決まりになりましたら、下記のフォームよりご回答をお願いいたします。
-
-【ご回答フォーム】
-${formUrl}
-
-上記フォームよりご回答をお待ちしております。
-ご不明な点がございましたら、お気軽にお問い合わせください。
-
-夢殿
-予約ID: ${emailPreview.reservation.bookingId}`
-        : `Dear Mr./Ms. ${emailPreview.reservation.guestName}
-
-Hello,
-Thank you for your reservation on ${emailPreview.reservation.checkinDate} for ${emailPreview.reservation.nights} night stay.
-
-We have some questions for you.
-Please inform us your details after you decided.
-
-【Response Form】
-${formUrl}
-
-Please submit your response through the form above.
-If you have any questions, please feel free to contact us.
-
-Best regards,
-Yumedono
-Booking ID: ${emailPreview.reservation.bookingId}`)
-        : (emailPreview.language === 'ja'
-          ? `${emailPreview.reservation.guestName} 様
-
-いつもありがとうございます。
-
-${emailPreview.reservation.checkinDate}より${emailPreview.reservation.nights}泊のご予約につきまして、ご回答をいただき誠にありがとうございました。
-受付が完了いたしましたことをご報告申し上げます。
-
-当日は心よりお待ちしております。
-ご不明な点がございましたら、お気軽にお問い合わせください。
-
-夢殿
-予約ID: ${emailPreview.reservation.bookingId}`
-          : `Dear Mr./Ms. ${emailPreview.reservation.guestName}
-
-Hello,
-
-Thank you for your response regarding your reservation on ${emailPreview.reservation.checkinDate} for ${emailPreview.reservation.nights} night stay.
-We are pleased to inform you that your reception is now complete.
-
-We look forward to welcoming you on the day.
-If you have any questions, please feel free to contact us.
-
-Best regards,
-Yumedono
-Booking ID: ${emailPreview.reservation.bookingId}`);
-
-      const currentSubject = emailPreview.editableSubject ?? defaultSubject;
-      const currentBody = emailPreview.editableBody ?? defaultBody;
-
-      return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setEmailPreview(null)}>
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between border-b pb-3">
-                <h2 className="text-xl font-semibold">メールプレビュー</h2>
-                <button onClick={() => setEmailPreview(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block font-semibold text-sm mb-1">言語選択</label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setEmailPreview({ reservation: emailPreview.reservation, type: emailPreview.type, language: 'ja', editableSubject: undefined, editableBody: undefined })}
-                      className={`px-4 py-2 rounded ${emailPreview.language === 'ja' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                    >
-                      日本語
-                    </button>
-                    <button
-                      onClick={() => setEmailPreview({ reservation: emailPreview.reservation, type: emailPreview.type, language: 'en', editableSubject: undefined, editableBody: undefined })}
-                      className={`px-4 py-2 rounded ${emailPreview.language === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                    >
-                      English
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-sm mb-1">宛先</label>
-                  <div className="text-gray-800">{emailPreview.reservation.email || '（メールアドレス未登録）'}</div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-sm mb-1">件名</label>
-                  <input
-                    type="text"
-                    value={currentSubject}
-                    onChange={(e) => setEmailPreview({ ...emailPreview, editableSubject: e.target.value })}
-                    className="w-full border rounded px-3 py-2 text-gray-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-sm mb-1">本文</label>
-                  <textarea
-                    value={currentBody}
-                    onChange={(e) => setEmailPreview({ ...emailPreview, editableBody: e.target.value })}
-                    className="w-full border rounded px-3 py-2 text-gray-800 font-sans text-sm"
-                    rows={15}
-                  />
-                </div>
-              </div>
-
-              <div className="border-t pt-4 flex gap-3">
-                <button onClick={() => setEmailPreview(null)} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                  キャンセル
-                </button>
-                <button
-                  onClick={() => emailPreview.reservation.email && handleSendEmail(emailPreview.reservation.email, currentSubject, currentBody, emailPreview.reservation.bookingId, emailPreview.type)}
-                  disabled={!emailPreview.reservation.email || sendingEmail}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sendingEmail ? '送信中...' : 'メール送信'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    })()}
-
-    {/* Response Detail Modal */}
-    {viewingResponse && (
+      {/* Response Detail Modal */}
+      {viewingResponse && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setViewingResponse(null)}>
         <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="p-6 space-y-4">
@@ -764,75 +834,8 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
     )}
 
     {/* Email History Modal */}
-    {viewingEmailHistory && (() => {
-      type EmailHistoryItem = {
-        type: 'initial' | 'reception';
-        to: string;
-        subject: string;
-        body: string;
-        sentAt: string;
-      };
-      
-      let history: EmailHistoryItem[] = [];
-      try {
-        history = viewingEmailHistory.emailHistory ? JSON.parse(viewingEmailHistory.emailHistory) : [];
-      } catch {
-        history = [];
-      }
-
-      return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setViewingEmailHistory(null)}>
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between border-b pb-3">
-                <h2 className="text-xl font-semibold">メール送信履歴</h2>
-                <button onClick={() => setViewingEmailHistory(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-              </div>
-
-              <div className="space-y-3">
-                <div className="text-sm text-gray-600 mb-4">
-                  予約ID: <span className="font-mono font-semibold">{viewingEmailHistory.bookingId}</span> - {viewingEmailHistory.guestName}
-                </div>
-
-                {history.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">メール送信履歴がありません</div>
-                ) : (
-                  <div className="space-y-4">
-                    {history.map((item, index) => (
-                      <div key={index} className="border rounded p-4 bg-gray-50">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${item.type === 'initial' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
-                            {item.type === 'initial' ? '回答依頼' : '受付完了'}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(item.sentAt).toLocaleString('ja-JP')}
-                          </span>
-                        </div>
-                        <div className="text-sm space-y-2">
-                          <div><span className="font-semibold">宛先:</span> {item.to}</div>
-                          <div><span className="font-semibold">件名:</span> {item.subject}</div>
-                          <div>
-                            <span className="font-semibold">本文:</span>
-                            <pre className="mt-1 whitespace-pre-wrap text-xs bg-white p-2 rounded border">{item.body}</pre>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t pt-4">
-                <button onClick={() => setViewingEmailHistory(null)} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                  閉じる
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    })()}
-    </>
+    {emailHistoryModal}
+    </div>
   );
 }
 
