@@ -30,6 +30,7 @@ export function StatusBadge({
   disabled?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [confirmChange, setConfirmChange] = useState<Status | null>(null);
 
   if (!onChange) {
     return (
@@ -58,8 +59,14 @@ export function StatusBadge({
               <button
                 key={s}
                 onClick={() => {
-                  onChange(s);
-                  setIsOpen(false);
+                  // If changing from 'completed', show confirmation
+                  if (status === 'completed' && s !== 'completed') {
+                    setConfirmChange(s);
+                    setIsOpen(false);
+                  } else {
+                    onChange(s);
+                    setIsOpen(false);
+                  }
                 }}
                 className={`block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${s === status ? 'font-semibold bg-gray-50' : ''}`}
               >
@@ -68,6 +75,50 @@ export function StatusBadge({
             ))}
           </div>
         </>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmChange && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setConfirmChange(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <h2 className="text-xl font-semibold text-orange-600">⚠️ ステータス変更の確認</h2>
+                <button onClick={() => setConfirmChange(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+              </div>
+              <div className="text-gray-700">
+                <p className="mb-2">
+                  受付完了ステータスを変更しようとしています。
+                </p>
+                <p className="font-semibold">
+                  <span className={`px-2 py-1 rounded ${colorByStatus['completed']}`}>{statusLabel['completed']}</span>
+                  {' → '}
+                  <span className={`px-2 py-1 rounded ${colorByStatus[confirmChange]}`}>{statusLabel[confirmChange]}</span>
+                </p>
+                <p className="mt-2 text-sm text-orange-700">
+                  本当に変更してよろしいですか？
+                </p>
+              </div>
+              <div className="flex gap-3 pt-4 border-t">
+                <button 
+                  onClick={() => setConfirmChange(null)} 
+                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                >
+                  キャンセル
+                </button>
+                <button 
+                  onClick={() => {
+                    onChange(confirmChange);
+                    setConfirmChange(null);
+                  }} 
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+                >
+                  変更する
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
