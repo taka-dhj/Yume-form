@@ -122,6 +122,7 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showUrgentOnly, setShowUrgentOnly] = useState(false);
   const [dismissedRevisions, setDismissedRevisions] = useState<Set<string>>(new Set());
+  const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; title: string; message: string } | null>(null);
   
   // Refs for scroll sync
   const topScrollRef = useRef<HTMLDivElement>(null);
@@ -419,7 +420,11 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to update status: ${err.error || 'Unknown error'}`);
+        setModalMessage({
+          type: 'error',
+          title: 'ステータス更新エラー',
+          message: err.error || 'Unknown error',
+        });
         setUpdating(null);
       } else {
         // Wait a moment for spreadsheet to update, then refresh
@@ -429,7 +434,11 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
         setTimeout(() => setUpdating(null), 1000);
       }
     } catch (err) {
-      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setModalMessage({
+        type: 'error',
+        title: 'エラー',
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
       setUpdating(null);
     }
   };
@@ -444,15 +453,27 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to send email: ${err.error || 'Unknown error'}`);
+        setModalMessage({
+          type: 'error',
+          title: 'メール送信エラー',
+          message: err.error || 'Unknown error',
+        });
       } else {
         // Refresh to show updated status and email history
         router.refresh();
         setEmailPreview(null);
-        alert('メールを送信しました');
+        setModalMessage({
+          type: 'success',
+          title: '送信完了',
+          message: 'メールを送信しました',
+        });
       }
     } catch (err) {
-      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setModalMessage({
+        type: 'error',
+        title: 'エラー',
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
     } finally {
       setSendingEmail(false);
     }
@@ -1112,6 +1133,30 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
 
     {/* Email History Modal */}
     {emailHistoryModal}
+
+    {/* Message Modal */}
+    {modalMessage && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setModalMessage(null)}>
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className={`text-xl font-semibold ${modalMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                {modalMessage.type === 'error' ? '❌ ' : '✅ '}{modalMessage.title}
+              </h2>
+              <button onClick={() => setModalMessage(null)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div className="text-gray-700">
+              <p>{modalMessage.message}</p>
+            </div>
+            <div className="border-t pt-4">
+              <button onClick={() => setModalMessage(null)} className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
