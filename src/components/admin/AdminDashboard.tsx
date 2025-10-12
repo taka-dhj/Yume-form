@@ -123,6 +123,8 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [showUrgentOnly, setShowUrgentOnly] = useState(false);
   const [dismissedRevisions, setDismissedRevisions] = useState<Set<string>>(new Set());
   const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; title: string; message: string } | null>(null);
+  const [showReminderList, setShowReminderList] = useState(false);
+  const [remindersSent, setRemindersSent] = useState<Set<string>>(new Set());
   
   // Refs for scroll sync
   const topScrollRef = useRef<HTMLDivElement>(null);
@@ -401,6 +403,33 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
     });
   }, [reservations, dismissedRevisions]);
 
+  // Detect reminder-due reservations
+  const reminderDueReservations = useMemo(() => {
+    const reminderThresholds = [30, 21, 14, 7];
+    return reservations.filter(r => {
+      if (r.status !== 'email_sent') return false;
+      if (remindersSent.has(r.bookingId)) return false;
+      
+      const checkin = new Date(r.checkinDate);
+      checkin.setHours(0, 0, 0, 0);
+      const todayCopy = new Date(today);
+      todayCopy.setHours(0, 0, 0, 0);
+      const daysUntil = Math.ceil((checkin.getTime() - todayCopy.getTime()) / (1000 * 60 * 60 * 24));
+      return reminderThresholds.includes(daysUntil);
+    });
+  }, [reservations, today, remindersSent]);
+
+  // Split by email availability
+  const remindersWithEmail = useMemo(() => 
+    reminderDueReservations.filter(r => r.email && r.email.trim()),
+    [reminderDueReservations]
+  );
+
+  const remindersNoEmail = useMemo(() => 
+    reminderDueReservations.filter(r => !r.email || !r.email.trim()),
+    [reminderDueReservations]
+  );
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -485,10 +514,11 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
     const urgentUnsent = c.pending;
     const todayNotCompleted = reservations.filter(r => isSameDateIso(r.checkinDate, today) && r.status !== 'completed').length;
     
-    // Calculate reminder due (email_sent status with check-in within 30 days)
+    // Calculate reminder due (email_sent status with check-in within 30 days, excluding already sent reminders)
     const reminderThresholds = [30, 21, 14, 7];
     const reminderDue = reservations.filter(r => {
       if (r.status !== 'email_sent') return false;
+      if (remindersSent.has(r.bookingId)) return false;
       const checkin = new Date(r.checkinDate);
       checkin.setHours(0, 0, 0, 0);
       const todayCopy = new Date(today);
@@ -498,7 +528,7 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
     }).length;
     
     return { c, urgentUnsent, reminderDue, todayNotCompleted };
-  }, [reservations, today]);
+  }, [reservations, today, remindersSent]);
 
   const filtered = useMemo(() => {
     let result = reservations.filter(r => {
@@ -599,11 +629,9 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
               </button>
               <button 
                 onClick={() => { 
-                  setStatusFilter('email_sent'); 
-                  // TODO: リマインダー期限でフィルター
-                  resetPage(); 
+                  setShowReminderList(true);
                 }}
-                className="hover:underline cursor-pointer"
+                className="hover:underline cursor-pointer font-bold"
               >
                 催促期限: {counts.reminderDue}件
               </button>
@@ -1133,6 +1161,132 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
 
     {/* Email History Modal */}
     {emailHistoryModal}
+
+    {/* Reminder List Modal */}
+    {showReminderList && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowReminderList(false)}>
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 space-y-6">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-xl font-semibold">📬 催促メール送信</h2>
+              <button onClick={() => setShowReminderList(false)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+
+            {/* With Email */}
+            {remindersWithEmail.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <span className="text-lg">📧</span>
+                  メールアドレスあり（{remindersWithEmail.length}件）
+                </h3>
+                <p className="text-sm text-gray-600 mb-3">未回答の方に催促メールを送信しますか？</p>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {remindersWithEmail.map(r => {
+                    const checkin = new Date(r.checkinDate);
+                    const daysUntil = Math.ceil((checkin.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    return (
+                      <div key={r.bookingId} className="border rounded p-3 flex items-center justify-between bg-blue-50">
+                        <div className="flex-1">
+                          <div className="font-mono font-semibold text-sm">{r.bookingId}</div>
+                          <div className="text-sm text-gray-700">{r.guestName}</div>
+                          <div className="text-xs text-gray-600">{r.email}</div>
+                          <div className="text-xs text-blue-700 mt-1">チェックイン: {r.checkinDate} （あと{daysUntil}日）</div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                            const formUrl = `${baseUrl}/form?bookingId=${r.bookingId}`;
+                            const subject = `【夢殿】ご回答のお願い（再送）- ${r.checkinDate}ご宿泊`;
+                            const body = `${r.guestName} 様
+
+いつもありがとうございます。
+
+${r.checkinDate}のご宿泊まで、残り${daysUntil}日となりました。
+
+以前お送りしたご質問フォームへのご回答をまだいただけておりません。
+スムーズなご案内のため、お早めのご回答をお願いいたします。
+
+【ご回答フォーム】
+${formUrl}
+
+ご回答いただけていない場合は、お手数ですが上記フォームよりご回答をお願いいたします。
+すでにご回答済みの場合は、本メールをご放念ください。
+
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+夢殿
+予約ID: ${r.bookingId}`;
+
+                            await handleSendEmail(r.email, subject, body, r.bookingId, 'initial');
+                            const newSent = new Set(remindersSent);
+                            newSent.add(r.bookingId);
+                            setRemindersSent(newSent);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap text-sm"
+                        >
+                          催促メール送信
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* No Email */}
+            {remindersNoEmail.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <span className="text-lg">📝</span>
+                  OTAより要送信（{remindersNoEmail.length}件）
+                </h3>
+                <p className="text-sm text-gray-600 mb-3">メールアドレスがないため、OTAから送信してください。</p>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {remindersNoEmail.map(r => {
+                    const checkin = new Date(r.checkinDate);
+                    const daysUntil = Math.ceil((checkin.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    return (
+                      <div key={r.bookingId} className="border rounded p-3 flex items-center justify-between bg-orange-50">
+                        <div className="flex-1">
+                          <div className="font-mono font-semibold text-sm">{r.bookingId}</div>
+                          <div className="text-sm text-gray-700">{r.guestName}</div>
+                          <div className="text-xs text-gray-500">メールアドレス: なし</div>
+                          <div className="text-xs text-orange-700 mt-1">
+                            チェックイン: {r.checkinDate} （あと{daysUntil}日） | OTA: {r.otaName}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const newSent = new Set(remindersSent);
+                            newSent.add(r.bookingId);
+                            setRemindersSent(newSent);
+                          }}
+                          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 whitespace-nowrap text-sm"
+                        >
+                          送信済み
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {remindersWithEmail.length === 0 && remindersNoEmail.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                催促が必要な予約はありません
+              </div>
+            )}
+
+            <div className="border-t pt-4">
+              <button onClick={() => setShowReminderList(false)} className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Message Modal */}
     {modalMessage && (
