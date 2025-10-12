@@ -625,11 +625,21 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
         <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 flex items-stretch gap-4">
           <button
             onClick={() => {
-              setShowUrgentOnly(!showUrgentOnly);
-              setStatusFilter('all');
-              setSearch('');
-              setCheckinFilter('');
-              resetPage();
+              if (showUrgentOnly) {
+                // Reset to show all
+                setShowUrgentOnly(false);
+                setStatusFilter('all');
+                setSearch('');
+                setCheckinFilter('');
+                resetPage();
+              } else {
+                // Show urgent only
+                setShowUrgentOnly(true);
+                setStatusFilter('all');
+                setSearch('');
+                setCheckinFilter('');
+                resetPage();
+              }
             }}
             className={`px-4 rounded text-sm whitespace-nowrap self-stretch ${showUrgentOnly ? 'bg-gray-600 text-white hover:bg-gray-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
           >
