@@ -58,10 +58,22 @@ export const handler: Handler = async (event) => {
 
     // Save form response JSON to notes column
     if (notesIdx !== -1) {
+      let previousResponse = null;
+      
+      // If this is a revision, save the previous response
+      if (isRevision && notesIdx !== -1 && data[rowIndex] && data[rowIndex][notesIdx]) {
+        try {
+          previousResponse = JSON.parse(data[rowIndex][notesIdx]);
+        } catch {
+          // If parsing fails, just save null
+        }
+      }
+      
       const formResponseJson = JSON.stringify({
-        submittedAt: new Date().toISOString(),
+        submittedAt: previousResponse?.submittedAt || new Date().toISOString(),
         isRevision: isRevision || false,
         revisedAt: isRevision ? new Date().toISOString() : undefined,
+        previousResponse: isRevision ? previousResponse : undefined,
         ...formData,
       });
       updates.push({

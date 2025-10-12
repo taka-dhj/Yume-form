@@ -121,7 +121,17 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   const [perPage, setPerPage] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showUrgentOnly, setShowUrgentOnly] = useState(false);
-  const [dismissedRevisions, setDismissedRevisions] = useState<Set<string>>(new Set());
+  const [dismissedRevisions, setDismissedRevisions] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dismissedRevisions');
+      if (saved) {
+        try {
+          return new Set(JSON.parse(saved));
+        } catch {}
+      }
+    }
+    return new Set();
+  });
   const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; title: string; message: string } | null>(null);
   const [showReminderList, setShowReminderList] = useState(false);
   const [remindersSent, setRemindersSent] = useState<Set<string>>(new Set());
@@ -129,6 +139,13 @@ export default function AdminDashboard({ reservations }: { reservations: Reserva
   // Refs for scroll sync
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
+
+  // Save dismissed revisions to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dismissedRevisions', JSON.stringify(Array.from(dismissedRevisions)));
+    }
+  }, [dismissedRevisions]);
 
   // Sync scroll between top and table
   useEffect(() => {
@@ -820,9 +837,16 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                         const formData = JSON.parse(r.notes);
                         if (formData.submittedAt && formData.isRevision) {
                           return (
-                            <span className="text-orange-600 text-[9px] font-bold" title={`修正日時: ${formData.revisedAt ? new Date(formData.revisedAt).toLocaleString('ja-JP') : ''}`}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewingResponse(r);
+                              }}
+                              className="text-orange-600 text-[9px] font-bold hover:text-orange-800 cursor-pointer"
+                              title={`修正日時: ${formData.revisedAt ? new Date(formData.revisedAt).toLocaleString('ja-JP') : ''} - クリックで詳細表示`}
+                            >
                               📝修正
-                            </span>
+                            </button>
                           );
                         }
                       } catch {}
@@ -949,9 +973,16 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
                     const formData = JSON.parse(r.notes);
                     if (formData.submittedAt && formData.isRevision) {
                       return (
-                        <span className="text-orange-600 text-[9px] font-bold">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingResponse(r);
+                          }}
+                          className="text-orange-600 text-[9px] font-bold hover:text-orange-800 cursor-pointer"
+                          title="クリックで修正内容を確認"
+                        >
                           📝修正
-                        </span>
+                        </button>
                       );
                     }
                   } catch {}
@@ -1095,24 +1126,110 @@ Booking ID: ${emailPreview.reservation.bookingId}`);
             {(() => {
               try {
                 const formData = JSON.parse(viewingResponse.notes);
-                if (formData.isRevision) {
+                if (formData.isRevision && formData.previousResponse) {
+                  const prev = formData.previousResponse;
+                  const changes: Array<{ field: string; before: string; after: string }> = [];
+                  
+                  // Compare fields
+                  if (prev.hasChildren !== formData.hasChildren || prev.childrenDetails !== formData.childrenDetails) {
+                    changes.push({
+                      field: 'お子様連れ',
+                      before: prev.hasChildren ? `はい - ${prev.childrenDetails || ''}` : 'いいえ',
+                      after: formData.hasChildren ? `はい - ${formData.childrenDetails || ''}` : 'いいえ',
+                    });
+                  }
+                  if (prev.arrivalCountryDate !== formData.arrivalCountryDate) {
+                    changes.push({
+                      field: '日本到着日',
+                      before: prev.arrivalCountryDate || '未入力',
+                      after: formData.arrivalCountryDate || '未入力',
+                    });
+                  }
+                  if (prev.prevNightPlace !== formData.prevNightPlace) {
+                    changes.push({
+                      field: '前泊場所',
+                      before: prev.prevNightPlace || '未入力',
+                      after: formData.prevNightPlace || '未入力',
+                    });
+                  }
+                  if (prev.phoneNumber !== formData.phoneNumber) {
+                    changes.push({
+                      field: '携帯電話',
+                      before: prev.phoneNumber || '未入力',
+                      after: formData.phoneNumber || '未入力',
+                    });
+                  }
+                  if (prev.dinnerRequest !== formData.dinnerRequest) {
+                    changes.push({
+                      field: '夕食追加',
+                      before: prev.dinnerRequest === 'yes' ? 'はい' : prev.dinnerRequest === 'no' ? 'いいえ' : '未入力',
+                      after: formData.dinnerRequest === 'yes' ? 'はい' : formData.dinnerRequest === 'no' ? 'いいえ' : '未入力',
+                    });
+                  }
+                  if (prev.dietaryDetails !== formData.dietaryDetails) {
+                    changes.push({
+                      field: '食事配慮',
+                      before: prev.dietaryDetails || '未入力',
+                      after: formData.dietaryDetails || '未入力',
+                    });
+                  }
+                  if (prev.arrivalTime !== formData.arrivalTime) {
+                    changes.push({
+                      field: '到着時刻',
+                      before: prev.arrivalTime || '未入力',
+                      after: formData.arrivalTime || '未入力',
+                    });
+                  }
+                  if (prev.needsPickup !== formData.needsPickup) {
+                    changes.push({
+                      field: '送迎希望',
+                      before: prev.needsPickup ? 'はい' : 'いいえ',
+                      after: formData.needsPickup ? 'はい' : 'いいえ',
+                    });
+                  }
+                  if (prev.otherNotes !== formData.otherNotes) {
+                    changes.push({
+                      field: 'その他',
+                      before: prev.otherNotes || '未入力',
+                      after: formData.otherNotes || '未入力',
+                    });
+                  }
+                  
                   return (
-                    <div className="bg-orange-100 border border-orange-300 rounded p-3 mb-4">
-                      <div className="font-bold text-orange-900">📝 この回答は修正されました</div>
-                      <div className="text-sm text-orange-800 mt-1">
+                    <div className="bg-orange-100 border border-orange-300 rounded p-4 mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-bold text-orange-900">📝 この回答は修正されました</div>
+                        <button
+                          onClick={() => {
+                            const newDismissed = new Set(dismissedRevisions);
+                            newDismissed.add(viewingResponse.bookingId);
+                            setDismissedRevisions(newDismissed);
+                            setViewingResponse(null);
+                          }}
+                          className="px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700"
+                        >
+                          確認済みにする
+                        </button>
+                      </div>
+                      <div className="text-sm text-orange-800 mb-3">
                         修正日時: {formData.revisedAt ? new Date(formData.revisedAt).toLocaleString('ja-JP') : '不明'}
                       </div>
-                      <button
-                        onClick={() => {
-                          const newDismissed = new Set(dismissedRevisions);
-                          newDismissed.add(viewingResponse.bookingId);
-                          setDismissedRevisions(newDismissed);
-                          setViewingResponse(null);
-                        }}
-                        className="mt-2 px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700"
-                      >
-                        確認済みにする
-                      </button>
+                      
+                      {changes.length > 0 && (
+                        <div className="bg-white rounded p-3 space-y-2">
+                          <div className="font-semibold text-gray-800 mb-2">変更箇所:</div>
+                          {changes.map((change, i) => (
+                            <div key={i} className="text-xs border-l-2 border-orange-400 pl-2">
+                              <div className="font-semibold text-gray-700">{change.field}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-red-600 line-through">{change.before}</span>
+                                <span className="text-gray-500">→</span>
+                                <span className="text-green-600 font-semibold">{change.after}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 }
